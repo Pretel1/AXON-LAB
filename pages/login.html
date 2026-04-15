@@ -6,21 +6,25 @@
     <div class="container" style="max-width: 500px;">
         <div class="page-header" style="text-align: center; margin-bottom: var(--space-xl);">
             <h1>🔑 <span class="highlight">Iniciar Sesión</span></h1>
-            <p style="color: var(--color-gray);">Accede a tu cuenta de AXON</p>
+            <p style="color: var(--text-muted);">Accede a tu cuenta de AXON</p>
         </div>
 
         <div class="form-container">
             <form id="loginForm">
                 <div class="form-group">
-                    <label for="loginEmail">Correo electrónico *</label>
+                    <label>Correo electrónico *</label>
                     <input type="email" id="loginEmail" required placeholder="ejemplo@dominio.com">
-                    <span class="error-message" id="errorEmailLogin">Ingresa tu email</span>
+                    <span class="error-message" id="errorEmail">Ingresa tu email</span>
                 </div>
 
                 <div class="form-group">
-                    <label for="loginPassword">Contraseña *</label>
+                    <label>Contraseña *</label>
                     <input type="password" id="loginPassword" required placeholder="Tu contraseña">
-                    <span class="error-message" id="errorPassLogin">Ingresa tu contraseña</span>
+                    <span class="error-message" id="errorPassword">Ingresa tu contraseña</span>
+                </div>
+
+                <div style="text-align: right; margin-bottom: var(--space-md);">
+                    <a href="#" id="forgotPasswordLink" style="color: var(--color-primary); font-size: var(--text-sm);">¿Olvidaste tu contraseña?</a>
                 </div>
 
                 <div class="form-actions">
@@ -28,90 +32,179 @@
                 </div>
             </form>
 
-            <p style="text-align: center; margin-top: var(--space-lg); color: var(--color-gray);">
+            <p style="text-align: center; margin-top: var(--space-lg);">
                 ¿No tienes cuenta? <a href="#registro" style="color: var(--color-primary);">Regístrate aquí</a>
             </p>
 
-            <div id="loginError" class="alert alert-error" style="display: none;">
-                ❌ Correo o contraseña incorrectos
+            <div id="mensaje" style="display: none; margin-top: var(--space-md); padding: var(--space-md); border-radius: var(--radius-md);"></div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal para recuperar contraseña -->
+<div id="resetPasswordModal" class="modal" style="display: none;">
+    <div class="modal-overlay"></div>
+    <div class="modal-container" style="max-width: 400px;">
+        <div class="modal-header">
+            <h3>🔐 Recuperar Contraseña</h3>
+            <button class="modal-close" onclick="cerrarModalReset()">✕</button>
+        </div>
+        <div class="modal-body">
+            <p style="margin-bottom: var(--space-md);">Ingresa tu correo electrónico y te enviaremos un enlace para restablecer tu contraseña.</p>
+            <div class="form-group">
+                <input type="email" id="resetEmail" placeholder="tu@email.com" style="width: 100%;">
             </div>
+            <div id="resetMensaje" style="display: none; margin-top: var(--space-md);"></div>
+        </div>
+        <div class="modal-footer">
+            <button class="btn btn-outline" onclick="cerrarModalReset()">Cancelar</button>
+            <button class="btn btn-primary" id="sendResetBtn">Enviar enlace</button>
         </div>
     </div>
 </div>
 
 <script>
-    function inicializarLogin() {
-        const form = document.getElementById('loginForm');
+    const form = document.getElementById('loginForm');
+    const mensajeDiv = document.getElementById('mensaje');
+    
+    // Limpiar errores
+    document.getElementById('loginEmail').addEventListener('input', () => {
+        document.getElementById('errorEmail').style.display = 'none';
+    });
+    document.getElementById('loginPassword').addEventListener('input', () => {
+        document.getElementById('errorPassword').style.display = 'none';
+    });
+    
+    form.addEventListener('submit', async (e) => {
+        e.preventDefault();
         
-        form.addEventListener('submit', function(e) {
-            e.preventDefault();
+        const email = document.getElementById('loginEmail').value.trim();
+        const password = document.getElementById('loginPassword').value;
+        
+        if (!email) {
+            document.getElementById('errorEmail').style.display = 'block';
+            return;
+        }
+        
+        if (!password) {
+            document.getElementById('errorPassword').style.display = 'block';
+            return;
+        }
+        
+        const btn = form.querySelector('button');
+        btn.disabled = true;
+        btn.textContent = '⏳ Iniciando sesión...';
+        mensajeDiv.style.display = 'none';
+        
+        try {
+            const result = await window.iniciarSesion(email, password);
             
-            const email = document.getElementById('loginEmail').value.trim();
-            const password = document.getElementById('loginPassword').value;
+            mensajeDiv.style.display = 'block';
             
-            if (!email || !password) {
-                document.getElementById('loginError').style.display = 'block';
+            if (result.success) {
+                mensajeDiv.innerHTML = '✅ ' + result.message;
+                mensajeDiv.className = 'alert alert-success';
+                
+                // Actualizar UI
+                if (typeof window.actualizarUIUsuario === 'function') {
+                    window.actualizarUIUsuario();
+                }
+                
                 setTimeout(() => {
-                    document.getElementById('loginError').style.display = 'none';
-                }, 3000);
-                return;
-            }
-            
-            // Verificar credenciales
-            const usuariosGuardados = localStorage.getItem('axon_usuarios');
-            if (!usuariosGuardados) {
-                document.getElementById('loginError').style.display = 'block';
-                setTimeout(() => {
-                    document.getElementById('loginError').style.display = 'none';
-                }, 3000);
-                return;
-            }
-            
-            const usuarios = JSON.parse(usuariosGuardados);
-            const usuario = usuarios.find(u => u.email === email && u.password === password);
-            
-            if (!usuario) {
-                document.getElementById('loginError').style.display = 'block';
-                setTimeout(() => {
-                    document.getElementById('loginError').style.display = 'none';
-                }, 3000);
-                return;
-            }
-            
-            if (!usuario.verificado) {
-                document.getElementById('loginError').style.display = 'block';
-                document.getElementById('loginError').innerHTML = '❌ Debes verificar tu cuenta primero. Revisa tu email.';
-                setTimeout(() => {
-                    document.getElementById('loginError').style.display = 'none';
-                    document.getElementById('loginError').innerHTML = '❌ Correo o contraseña incorrectos';
-                }, 3000);
-                return;
-            }
-            
-            // Iniciar sesión
-            localStorage.setItem('axon_usuario_actual', email);
-            localStorage.setItem('axon_sesion_activa', 'true');
-            
-            // Actualizar interfaz
-            if (typeof window.actualizarUIUsuario === 'function') {
-                window.actualizarUIUsuario(usuario.nombre);
-            }
-            
-            // Redirigir al inicio
-            if (typeof window.cambiarPagina === 'function') {
-                window.cambiarPagina('inicio');
+                    window.location.href = '#inicio';
+                }, 1500);
             } else {
-                window.location.href = '#inicio';
+                mensajeDiv.innerHTML = '❌ ' + result.message;
+                mensajeDiv.className = 'alert alert-error';
+                btn.disabled = false;
+                btn.textContent = '🔓 Iniciar Sesión';
             }
             
-            // Mostrar mensaje de bienvenida
-            alert(`✅ ¡Bienvenido de vuelta, ${usuario.nombre}!`);
-        });
+        } catch (error) {
+            console.error('Error:', error);
+            mensajeDiv.innerHTML = '❌ Error al iniciar sesión';
+            mensajeDiv.className = 'alert alert-error';
+            mensajeDiv.style.display = 'block';
+            btn.disabled = false;
+            btn.textContent = '🔓 Iniciar Sesión';
+        }
+    });
+    
+    // ============================================
+    // RECUPERAR CONTRASEÑA
+    // ============================================
+    let modalAbierto = false;
+    
+    document.getElementById('forgotPasswordLink').addEventListener('click', (e) => {
+        e.preventDefault();
+        abrirModalReset();
+    });
+    
+    function abrirModalReset() {
+        const modal = document.getElementById('resetPasswordModal');
+        modal.style.display = 'flex';
+        document.body.style.overflow = 'hidden';
+        document.getElementById('resetEmail').value = '';
+        document.getElementById('resetMensaje').style.display = 'none';
+        modalAbierto = true;
     }
     
-    if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', inicializarLogin);
-    } else {
-        inicializarLogin();
+    function cerrarModalReset() {
+        const modal = document.getElementById('resetPasswordModal');
+        modal.style.display = 'none';
+        document.body.style.overflow = '';
+        modalAbierto = false;
     }
+    
+    document.getElementById('sendResetBtn').addEventListener('click', async () => {
+        const email = document.getElementById('resetEmail').value.trim();
+        const resetMensaje = document.getElementById('resetMensaje');
+        const btn = document.getElementById('sendResetBtn');
+        
+        if (!email) {
+            resetMensaje.innerHTML = '❌ Ingresa tu correo electrónico';
+            resetMensaje.className = 'alert alert-error';
+            resetMensaje.style.display = 'block';
+            return;
+        }
+        
+        btn.disabled = true;
+        btn.textContent = '⏳ Enviando...';
+        resetMensaje.style.display = 'none';
+        
+        try {
+            const result = await window.restablecerPassword(email);
+            
+            resetMensaje.style.display = 'block';
+            
+            if (result.success) {
+                resetMensaje.innerHTML = '✅ ' + result.message;
+                resetMensaje.className = 'alert alert-success';
+                setTimeout(() => {
+                    cerrarModalReset();
+                }, 3000);
+            } else {
+                resetMensaje.innerHTML = '❌ ' + result.message;
+                resetMensaje.className = 'alert alert-error';
+            }
+            
+        } catch (error) {
+            resetMensaje.innerHTML = '❌ Error al enviar el enlace';
+            resetMensaje.className = 'alert alert-error';
+            resetMensaje.style.display = 'block';
+        } finally {
+            btn.disabled = false;
+            btn.textContent = 'Enviar enlace';
+        }
+    });
+    
+    // Cerrar modal con ESC
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && modalAbierto) {
+            cerrarModalReset();
+        }
+    });
+    
+    // Cerrar modal haciendo clic en overlay
+    document.querySelector('.modal-overlay')?.addEventListener('click', cerrarModalReset);
 </script>
