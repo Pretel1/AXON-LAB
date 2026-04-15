@@ -2,104 +2,15 @@
     <div class="container" style="max-width: 500px;">
         <div class="page-header" style="text-align: center; margin-bottom: var(--space-xl);">
             <h1>🔐 <span class="highlight">Verificar Cuenta</span></h1>
-            <p style="color: var(--text-muted);">Ingresa el código enviado a tu correo</p>
+            <p style="color: var(--text-muted);">Modo prueba - Verificación automática</p>
         </div>
 
         <div class="form-container">
-            <form id="verificacionForm">
-                <div class="form-group">
-                    <label>Código de verificación (OTP)</label>
-                    <input type="text" id="otpCode" maxlength="6" placeholder="Ingresa el código de 6 dígitos" required>
-                </div>
-                <div class="form-actions">
-                    <button type="submit" class="btn btn-primary">✅ Verificar</button>
-                </div>
-            </form>
-            <p style="text-align: center; margin-top: var(--space-lg);">
-                ¿No recibiste el código? 
-                <a href="#" id="reenviarOtp" style="color: var(--color-primary);">Reenviar código</a>
-            </p>
-            <div id="mensaje" style="display: none; margin-top: var(--space-md); padding: var(--space-md); border-radius: var(--radius-md);"></div>
+            <div class="alert alert-success" style="text-align: center;">
+                ✅ Tu cuenta ha sido verificada automáticamente.
+                <br><br>
+                <a href="#login" class="btn btn-primary" style="margin-top: var(--space-md);">🔑 Ir a Iniciar Sesión</a>
+            </div>
         </div>
     </div>
 </div>
-
-<script>
-    let emailVerificacion = null;
-    
-    // Obtener email de la URL
-    const urlParams = new URLSearchParams(window.location.search);
-    emailVerificacion = urlParams.get('email');
-    
-    if (!emailVerificacion) {
-        const hash = window.location.hash;
-        const match = hash.match(/[?&]email=([^&]+)/);
-        if (match) emailVerificacion = decodeURIComponent(match[1]);
-    }
-    
-    if (!emailVerificacion) {
-        const mensajeDiv = document.getElementById('mensaje');
-        mensajeDiv.innerHTML = '❌ No se encontró información de verificación';
-        mensajeDiv.style.display = 'block';
-        mensajeDiv.className = 'alert alert-error';
-    }
-    
-    const form = document.getElementById('verificacionForm');
-    const mensajeDiv = document.getElementById('mensaje');
-    
-    form.addEventListener('submit', async (e) => {
-        e.preventDefault();
-        
-        const otp = document.getElementById('otpCode').value.trim();
-        const btn = form.querySelector('button');
-        
-        btn.disabled = true;
-        btn.textContent = '⏳ Verificando...';
-        
-        const result = await window.verificarOTP(emailVerificacion, otp);
-        
-        mensajeDiv.style.display = 'block';
-        
-        if (result.success) {
-            mensajeDiv.innerHTML = '✅ ' + result.message;
-            mensajeDiv.className = 'alert alert-success';
-            setTimeout(() => {
-                window.location.href = '#login';
-            }, 2000);
-        } else {
-            mensajeDiv.innerHTML = '❌ ' + result.message;
-            mensajeDiv.className = 'alert alert-error';
-            btn.disabled = false;
-            btn.textContent = '✅ Verificar';
-        }
-    });
-    
-    document.getElementById('reenviarOtp').addEventListener('click', async (e) => {
-        e.preventDefault();
-        
-        const btn = e.target;
-        btn.textContent = '⏳ Enviando...';
-        btn.style.pointerEvents = 'none';
-        
-        const result = await window.reenviarOTP(emailVerificacion);
-        
-        mensajeDiv.style.display = 'block';
-        
-        if (result.success) {
-            mensajeDiv.innerHTML = '✅ ' + result.message;
-            mensajeDiv.className = 'alert alert-success';
-        } else {
-            mensajeDiv.innerHTML = '❌ ' + result.message;
-            mensajeDiv.className = 'alert alert-error';
-        }
-        
-        btn.textContent = 'Reenviar código';
-        btn.style.pointerEvents = 'auto';
-        
-        setTimeout(() => {
-            if (mensajeDiv.innerHTML.includes('éxito')) {
-                mensajeDiv.style.display = 'none';
-            }
-        }, 3000);
-    });
-</script>
