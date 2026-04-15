@@ -52,7 +52,7 @@
         <div class="modal-body">
             <p style="margin-bottom: var(--space-md);">Ingresa tu correo electrónico y te enviaremos un enlace para restablecer tu contraseña.</p>
             <div class="form-group">
-                <input type="email" id="resetEmail" placeholder="tu@email.com" style="width: 100%;">
+                <input type="email" id="resetEmail" placeholder="tu@email.com" style="width: 100%; padding: var(--space-3); border-radius: var(--radius-md); background: rgba(255,255,255,0.05); border: 1px solid var(--border-color); color: white;">
             </div>
             <div id="resetMensaje" style="display: none; margin-top: var(--space-md);"></div>
         </div>
@@ -67,7 +67,6 @@
     const form = document.getElementById('loginForm');
     const mensajeDiv = document.getElementById('mensaje');
     
-    // Limpiar errores
     document.getElementById('loginEmail').addEventListener('input', () => {
         document.getElementById('errorEmail').style.display = 'none';
     });
@@ -85,7 +84,6 @@
             document.getElementById('errorEmail').style.display = 'block';
             return;
         }
-        
         if (!password) {
             document.getElementById('errorPassword').style.display = 'block';
             return;
@@ -98,30 +96,20 @@
         
         try {
             const result = await window.iniciarSesion(email, password);
-            
             mensajeDiv.style.display = 'block';
             
             if (result.success) {
                 mensajeDiv.innerHTML = '✅ ' + result.message;
                 mensajeDiv.className = 'alert alert-success';
-                
-                // Actualizar UI
-                if (typeof window.actualizarUIUsuario === 'function') {
-                    window.actualizarUIUsuario();
-                }
-                
-                setTimeout(() => {
-                    window.location.href = '#inicio';
-                }, 1500);
+                if (typeof window.actualizarUIUsuario === 'function') window.actualizarUIUsuario();
+                setTimeout(() => { window.location.href = '#inicio'; }, 1500);
             } else {
                 mensajeDiv.innerHTML = '❌ ' + result.message;
                 mensajeDiv.className = 'alert alert-error';
                 btn.disabled = false;
                 btn.textContent = '🔓 Iniciar Sesión';
             }
-            
         } catch (error) {
-            console.error('Error:', error);
             mensajeDiv.innerHTML = '❌ Error al iniciar sesión';
             mensajeDiv.className = 'alert alert-error';
             mensajeDiv.style.display = 'block';
@@ -130,31 +118,23 @@
         }
     });
     
-    // ============================================
-    // RECUPERAR CONTRASEÑA
-    // ============================================
     let modalAbierto = false;
-    
     document.getElementById('forgotPasswordLink').addEventListener('click', (e) => {
         e.preventDefault();
-        abrirModalReset();
-    });
-    
-    function abrirModalReset() {
         const modal = document.getElementById('resetPasswordModal');
         modal.style.display = 'flex';
         document.body.style.overflow = 'hidden';
         document.getElementById('resetEmail').value = '';
         document.getElementById('resetMensaje').style.display = 'none';
         modalAbierto = true;
-    }
+    });
     
-    function cerrarModalReset() {
+    window.cerrarModalReset = function() {
         const modal = document.getElementById('resetPasswordModal');
         modal.style.display = 'none';
         document.body.style.overflow = '';
         modalAbierto = false;
-    }
+    };
     
     document.getElementById('sendResetBtn').addEventListener('click', async () => {
         const email = document.getElementById('resetEmail').value.trim();
@@ -174,20 +154,15 @@
         
         try {
             const result = await window.restablecerPassword(email);
-            
             resetMensaje.style.display = 'block';
-            
             if (result.success) {
                 resetMensaje.innerHTML = '✅ ' + result.message;
                 resetMensaje.className = 'alert alert-success';
-                setTimeout(() => {
-                    cerrarModalReset();
-                }, 3000);
+                setTimeout(() => window.cerrarModalReset(), 3000);
             } else {
                 resetMensaje.innerHTML = '❌ ' + result.message;
                 resetMensaje.className = 'alert alert-error';
             }
-            
         } catch (error) {
             resetMensaje.innerHTML = '❌ Error al enviar el enlace';
             resetMensaje.className = 'alert alert-error';
@@ -198,13 +173,8 @@
         }
     });
     
-    // Cerrar modal con ESC
     document.addEventListener('keydown', (e) => {
-        if (e.key === 'Escape' && modalAbierto) {
-            cerrarModalReset();
-        }
+        if (e.key === 'Escape' && modalAbierto) window.cerrarModalReset();
     });
-    
-    // Cerrar modal haciendo clic en overlay
-    document.querySelector('.modal-overlay')?.addEventListener('click', cerrarModalReset);
+    document.querySelector('.modal-overlay')?.addEventListener('click', window.cerrarModalReset);
 </script>
