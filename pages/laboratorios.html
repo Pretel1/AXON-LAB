@@ -1,22 +1,22 @@
 <!-- ============================================ -->
-<!-- PÁGINA: LABORATORIOS (Listado completo)      -->
+<!-- PÁGINA: LABORATORIOS                         -->
 <!-- ============================================ -->
 
 <div class="page fade-in">
     <div class="page-header" style="text-align: center; margin-bottom: var(--space-xl);">
         <h1>📚 <span class="highlight">Laboratorios</span></h1>
-        <p style="color: var(--color-gray);">Explora todos los laboratorios disponibles en el repositorio</p>
+        <p style="color: var(--text-muted);">Explora todos los laboratorios disponibles</p>
     </div>
 
     <!-- Buscador y Filtros -->
     <div class="search-section" style="max-width: 800px; margin: 0 auto var(--space-2xl) auto;">
         <div class="search-box">
             <span class="search-icon">🔍</span>
-            <input type="text" id="searchInputLab" class="search-input" placeholder="Buscar por nombre, autor o categoría...">
+            <input type="text" id="searchInput" class="search-input" placeholder="Buscar por nombre o autor...">
         </div>
-        <div class="filter-group" style="justify-content: center;">
+        <div class="filter-group" style="justify-content: center; margin-top: var(--space-md);">
             <span class="filter-label">Filtrar por:</span>
-            <select id="categoryFilterLab" class="filter-select">
+            <select id="categoryFilter" class="filter-select">
                 <option value="todas">📂 Todas las categorías</option>
                 <option value="redes">🌐 Redes</option>
                 <option value="programacion">💻 Programación</option>
@@ -24,71 +24,51 @@
                 <option value="inteligencia">🧠 Inteligencia Artificial</option>
                 <option value="seguridad">🔒 Seguridad</option>
             </select>
-            <button id="resetFiltersBtn" class="btn btn-outline" style="padding: 0.5rem 1rem;">🔄 Limpiar filtros</button>
+            <button id="resetFiltersBtn" class="btn btn-outline" style="padding: 0.5rem 1rem;">🔄 Limpiar</button>
         </div>
     </div>
 
     <div class="results-info" style="text-align: center;">
-        <span id="resultsCountLab">0</span> laboratorios encontrados
+        <span id="resultsCount">0</span> laboratorios encontrados
     </div>
 
-    <div class="labs-grid" id="labsGridLab">
-        <!-- Los laboratorios se cargarán dinámicamente -->
-        <div class="lab-card">
-            <div class="lab-card-image">📚</div>
-            <div class="lab-card-content">
-                <span class="lab-card-category">Cargando...</span>
-                <h3 class="lab-card-title">Cargando laboratorios...</h3>
-                <p class="lab-card-author">Cargando...</p>
-            </div>
+    <div class="labs-grid" id="labsGrid">
+        <div style="text-align: center; grid-column: 1/-1; padding: var(--space-3xl);">
+            <div class="loader-spinner" style="margin: 0 auto;"></div>
+            <p style="margin-top: var(--space-md);">Cargando laboratorios...</p>
         </div>
     </div>
 </div>
 
 <script>
-    // Variables globales para esta página
     let todosLosLaboratorios = [];
     
-    // Cargar laboratorios desde localStorage o datos simulados
-    function cargarLaboratorios() {
-        const guardados = localStorage.getItem('axon_laboratorios');
-        if (guardados) {
-            todosLosLaboratorios = JSON.parse(guardados);
-        } else {
-            // Datos simulados
-            todosLosLaboratorios = [
-                { id: 1, nombre: "Introducción a Redes TCP/IP", autor: "Dr. Carlos Martínez", categoria: "redes", descripcion: "Laboratorio básico sobre fundamentos de redes, direccionamiento IP y protocolos TCP/UDP.", archivo: "lab-redes-tcpip.pdf", fecha: "2024-01-15", descargas: 245, vistas: 1250, icono: "🌐" },
-                { id: 2, nombre: "Programación en Python para Data Science", autor: "Ing. Ana Rodríguez", categoria: "programacion", descripcion: "Laboratorio práctico de Python con pandas, numpy y matplotlib.", archivo: "lab-python-datascience.zip", fecha: "2024-01-20", descargas: 189, vistas: 890, icono: "🐍" },
-                { id: 3, nombre: "Diseño de Bases de Datos Relacionales", autor: "Dra. María Fernández", categoria: "bases-datos", descripcion: "Laboratorio de modelado de datos, SQL y normalización.", archivo: "lab-bases-datos.pdf", fecha: "2024-01-10", descargas: 312, vistas: 1560, icono: "🗄️" },
-                { id: 4, nombre: "Introducción a Machine Learning", autor: "Dr. Roberto Sánchez", categoria: "inteligencia", descripcion: "Laboratorio introductorio a algoritmos de ML supervisado y no supervisado.", archivo: "lab-ml-basico.zip", fecha: "2024-01-25", descargas: 178, vistas: 1020, icono: "🤖" },
-                { id: 5, nombre: "Seguridad en Aplicaciones Web", autor: "Ing. Laura Torres", categoria: "seguridad", descripcion: "Laboratorio de vulnerabilidades web comunes y cómo prevenirlas.", archivo: "lab-seguridad-web.pdf", fecha: "2024-01-18", descargas: 267, vistas: 1340, icono: "🔒" },
-                { id: 6, nombre: "Enrutamiento y Switching Avanzado", autor: "Ing. Pablo Gómez", categoria: "redes", descripcion: "Laboratorio de configuración de routers y switches.", archivo: "lab-enrutamiento.pdf", fecha: "2024-02-01", descargas: 156, vistas: 980, icono: "🔄" },
-                { id: 7, nombre: "Desarrollo Web con React", autor: "Ing. Sofía Ramírez", categoria: "programacion", descripcion: "Laboratorio para construir aplicaciones modernas con React.js.", archivo: "lab-react.zip", fecha: "2024-02-05", descargas: 134, vistas: 750, icono: "⚛️" },
-                { id: 8, nombre: "Big Data con Hadoop", autor: "Dr. Andrés López", categoria: "bases-datos", descripcion: "Laboratorio de procesamiento distribuido con Hadoop.", archivo: "lab-hadoop.pdf", fecha: "2024-02-10", descargas: 98, vistas: 620, icono: "🐘" },
-                { id: 9, nombre: "Redes Neuronales con TensorFlow", autor: "Dra. Carmen Díaz", categoria: "inteligencia", descripcion: "Laboratorio práctico de deep learning con TensorFlow.", archivo: "lab-tensorflow.zip", fecha: "2024-02-12", descargas: 145, vistas: 890, icono: "🧠" },
-                { id: 10, nombre: "Criptografía y Seguridad", autor: "Dr. Javier Mendoza", categoria: "seguridad", descripcion: "Laboratorio de algoritmos criptográficos.", archivo: "lab-criptografia.pdf", fecha: "2024-02-15", descargas: 210, vistas: 1100, icono: "🔐" },
-                { id: 11, nombre: "DevOps y CI/CD", autor: "Ing. Miguel Ángel Ruiz", categoria: "programacion", descripcion: "Laboratorio de integración continua y despliegue continuo.", archivo: "lab-devops.pdf", fecha: "2024-02-20", descargas: 87, vistas: 540, icono: "🚀" },
-                { id: 12, nombre: "Internet de las Cosas (IoT)", autor: "Dr. Fernando Ortiz", categoria: "redes", descripcion: "Laboratorio de sensores y dispositivos IoT.", archivo: "lab-iot.zip", fecha: "2024-02-22", descargas: 123, vistas: 780, icono: "📡" }
-            ];
+    async function cargarLaboratorios() {
+        const container = document.getElementById('labsGrid');
+        container.innerHTML = '<div style="text-align: center; grid-column: 1/-1; padding: var(--space-3xl);"><div class="loader-spinner" style="margin: 0 auto;"></div><p style="margin-top: var(--space-md);">Cargando laboratorios...</p></div>';
+        
+        try {
+            todosLosLaboratorios = await window.obtenerLaboratorios();
+            renderizarLaboratorios(todosLosLaboratorios);
+        } catch (error) {
+            console.error('Error:', error);
+            container.innerHTML = '<div style="text-align: center; grid-column: 1/-1; padding: var(--space-3xl);"><span style="font-size: 3rem;">❌</span><h3>Error al cargar</h3><p style="color: var(--text-muted);">No se pudieron cargar los laboratorios</p></div>';
         }
-        renderizarLaboratorios(todosLosLaboratorios);
     }
     
-    // Renderizar laboratorios en el grid
     function renderizarLaboratorios(laboratorios) {
-        const container = document.getElementById('labsGridLab');
-        const resultsSpan = document.getElementById('resultsCountLab');
-        
-        if (!container) return;
+        const container = document.getElementById('labsGrid');
+        const resultsSpan = document.getElementById('resultsCount');
         
         resultsSpan.textContent = laboratorios.length;
         
         if (laboratorios.length === 0) {
             container.innerHTML = `
                 <div style="text-align: center; grid-column: 1/-1; padding: var(--space-3xl);">
-                    <span style="font-size: 4rem;">🔍</span>
-                    <h3>No se encontraron laboratorios</h3>
-                    <p style="color: var(--color-gray);">Intenta con otros términos de búsqueda</p>
+                    <span style="font-size: 4rem;">📭</span>
+                    <h3>No hay laboratorios</h3>
+                    <p style="color: var(--text-muted);">Sé el primero en subir un laboratorio</p>
+                    <a href="#subir" class="btn btn-primary" style="margin-top: var(--space-md);">📤 Subir laboratorio</a>
                 </div>
             `;
             return;
@@ -111,86 +91,70 @@
                     <span class="lab-card-category">${getIconoCategoria(lab.categoria)} ${getNombreCategoria(lab.categoria)}</span>
                     <h3 class="lab-card-title">${lab.nombre}</h3>
                     <p class="lab-card-author">👨‍🏫 ${lab.autor}</p>
-                    <p class="lab-card-description" style="color: var(--color-gray); font-size: var(--text-sm); margin-bottom: var(--space-sm);">${lab.descripcion?.substring(0, 100) || 'Sin descripción'}${lab.descripcion?.length > 100 ? '...' : ''}</p>
+                    <p class="lab-card-description">${lab.descripcion?.substring(0, 120) || 'Sin descripción'}${lab.descripcion?.length > 120 ? '...' : ''}</p>
                     <div class="lab-card-stats">
                         <span>📥 ${lab.descargas || 0}</span>
                         <span>👁️ ${lab.vistas || 0}</span>
-                        <span>📅 ${lab.fecha}</span>
+                        <span>📅 ${lab.fecha?.split('T')[0] || 'Reciente'}</span>
                     </div>
                     <div style="margin-top: var(--space-md); display: flex; gap: var(--space-sm); flex-wrap: wrap;">
-                        <button class="btn-descargar" data-archivo="${lab.archivo}" style="background: var(--color-primary); border: none; padding: 0.5rem 1rem; border-radius: var(--radius-md); color: white; cursor: pointer;">📥 Descargar</button>
-                        <button class="btn-ver-detalle" data-id="${lab.id}" style="background: transparent; border: 1px solid var(--color-primary); padding: 0.5rem 1rem; border-radius: var(--radius-md); color: var(--color-primary); cursor: pointer;">👁️ Ver detalle</button>
+                        <button class="btn-descargar" data-id="${lab.id}" data-archivo="${lab.archivoURL || ''}" style="background: var(--color-primary); border: none; padding: 0.5rem 1rem; border-radius: var(--radius-md); color: white; cursor: pointer;">📥 Descargar</button>
+                        <button class="btn-ver" data-id="${lab.id}" style="background: transparent; border: 1px solid var(--color-primary); padding: 0.5rem 1rem; border-radius: var(--radius-md); color: var(--color-primary); cursor: pointer;">👁️ Ver detalle</button>
                     </div>
                 </div>
             </div>
         `).join('');
         
-        // Agregar event listeners a los botones
+        // Event listeners
         document.querySelectorAll('.btn-descargar').forEach(btn => {
-            btn.addEventListener('click', (e) => {
-                e.stopPropagation();
-                const archivo = btn.getAttribute('data-archivo');
-                alert(`📥 Descargando: ${archivo}\n(Simulación - En un entorno real se descargaría el archivo)`);
-            });
-        });
-        
-        document.querySelectorAll('.btn-ver-detalle').forEach(btn => {
-            btn.addEventListener('click', (e) => {
+            btn.addEventListener('click', async (e) => {
                 e.stopPropagation();
                 const id = btn.getAttribute('data-id');
-                if (typeof window.cambiarPagina === 'function') {
-                    window.cambiarPagina('detalle', { id: id });
+                const archivoURL = btn.getAttribute('data-archivo');
+                
+                if (archivoURL) {
+                    window.open(archivoURL, '_blank');
+                    await window.incrementarDescargas(id);
+                    mostrarNotificacion('📥 Descarga iniciada', 'success');
                 } else {
-                    window.location.href = `#detalle?id=${id}`;
+                    mostrarNotificacion('⚠️ No hay archivo disponible', 'warning');
                 }
             });
         });
-    }
-    
-    // Filtrar laboratorios
-    function filtrarLaboratorios() {
-        const searchTerm = document.getElementById('searchInputLab')?.value.toLowerCase() || '';
-        const category = document.getElementById('categoryFilterLab')?.value || 'todas';
         
-        let laboratorios = [...todosLosLaboratorios];
-        
-        if (searchTerm) {
-            laboratorios = laboratorios.filter(lab => 
-                lab.nombre.toLowerCase().includes(searchTerm) || 
-                lab.autor.toLowerCase().includes(searchTerm)
-            );
-        }
-        
-        if (category !== 'todas') {
-            laboratorios = laboratorios.filter(lab => lab.categoria === category);
-        }
-        
-        renderizarLaboratorios(laboratorios);
-    }
-    
-    // Inicializar eventos
-    function inicializarPagina() {
-        cargarLaboratorios();
-        
-        const searchInput = document.getElementById('searchInputLab');
-        const categoryFilter = document.getElementById('categoryFilterLab');
-        const resetBtn = document.getElementById('resetFiltersBtn');
-        
-        if (searchInput) searchInput.addEventListener('input', filtrarLaboratorios);
-        if (categoryFilter) categoryFilter.addEventListener('change', filtrarLaboratorios);
-        if (resetBtn) {
-            resetBtn.addEventListener('click', () => {
-                if (searchInput) searchInput.value = '';
-                if (categoryFilter) categoryFilter.value = 'todas';
-                filtrarLaboratorios();
+        document.querySelectorAll('.btn-ver').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                const id = btn.getAttribute('data-id');
+                window.location.href = `#detalle?id=${id}`;
             });
-        }
+        });
     }
     
-    // Ejecutar cuando el DOM esté listo
-    if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', inicializarPagina);
-    } else {
-        inicializarPagina();
+    function filtrar() {
+        const searchTerm = document.getElementById('searchInput')?.value || '';
+        const categoria = document.getElementById('categoryFilter')?.value || 'todas';
+        const filtrados = window.filtrarLaboratorios(todosLosLaboratorios, searchTerm, categoria);
+        renderizarLaboratorios(filtrados);
     }
+    
+    function mostrarNotificacion(mensaje, tipo) {
+        const notificacion = document.createElement('div');
+        notificacion.className = `alert alert-${tipo}`;
+        notificacion.textContent = mensaje;
+        notificacion.style.cssText = `position: fixed; bottom: 20px; right: 20px; z-index: 1000; max-width: 300px; animation: slideInRight 0.3s ease;`;
+        document.body.appendChild(notificacion);
+        setTimeout(() => notificacion.remove(), 3000);
+    }
+    
+    // Inicializar
+    document.getElementById('searchInput')?.addEventListener('input', filtrar);
+    document.getElementById('categoryFilter')?.addEventListener('change', filtrar);
+    document.getElementById('resetFiltersBtn')?.addEventListener('click', () => {
+        if (document.getElementById('searchInput')) document.getElementById('searchInput').value = '';
+        if (document.getElementById('categoryFilter')) document.getElementById('categoryFilter').value = 'todas';
+        filtrar();
+    });
+    
+    cargarLaboratorios();
 </script>
