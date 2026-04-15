@@ -1,39 +1,94 @@
-/**
- * AXON - AUTH.JS
- * Autenticación con Firebase + Notificaciones FCM
- */
+// Configuración de EmailJS
+const EMAILJS_CONFIG = {
+    serviceId: "service_2m0odrp",           // ✅ Service ID
+    templateId: "template_AQUI_TU_ID",      // ← REEMPLAZA con el Template ID de One-Time Password
+    publicKey: "TU_PUBLIC_KEY_AQUI"         // ← REEMPLAZA con tu Public Key
+};
 
-// ============================================
-// REGISTRO DE USUARIO
-// ============================================
+// Inicializar EmailJS
+emailjs.init(EMAILJS_CONFIG.publicKey);
+
+function generarOTP() {
+    return Math.floor(100000 + Math.random() * 900000).toString();
+}
+
+function obtenerFechaExpiracion() {
+    const fecha = new Date();
+    fecha.setMinutes(fecha.getMinutes() + 15);
+    return fecha.toLocaleString();
+}
+
+async function enviarEmailOTP(email, nombre, otp) {
+    try {
+        // Usar las variables correctas de la plantilla
+        const templateParams = {
+            passcode: otp,                    // ← Variable correcta para el código
+            time: obtenerFechaExpiracion(),   // ← Fecha de expiración
+            to_email: email,
+            to_name: nombre
+        };
+        
+        const response = await emailjs.send(
+            EMAILJS_CONFIG.serviceId,
+            EMAILJS_CONFIG.templateId,
+            templateParams
+        );
+        
+        console.log('✅ Email enviado a:', email);
+        console.log('📧 Código OTP:', otp);
+        return true;
+        
+    } catch (error) {
+        console.error('❌ Error EmailJS:', error);
+        return false;
+    }
+}
+
 async function registrarUsuario(email, password, nombre) {
     try {
+        // Verificar si el usuario ya existe
+        const existingUser = await firebaseAuth.fetchSignInMethodsForEmail(email);
+        if (existingUser.length > 0) {
+            return { success: false, message: 'Este correo ya está registrado' };
+        }
+        
+        // Crear usuario
         const userCredential = await firebaseAuth.createUserWithEmailAndPassword(email, password);
         const user = userCredential.user;
         
+        const otp = generarOTP();
+        const otpExpiry = Date.now() + 15 * 60 * 1000; // 15 minutos
+        
+        // Guardar en Firestore
         await firebaseDB.collection('usuarios').doc(user.uid).set({
             uid: user.uid,
             email: email,
             nombre: nombre,
             rol: 'usuario',
-            verificado: user.emailVerified,
-            fechaRegistro: firebase.firestore.FieldValue.serverTimestamp(),
-            avatar: '👤',
-            notificacionesActivas: false
+            verificado: false,
+            otp: otp,
+            otpExpiry: otpExpiry,
+            fechaRegistro: new Date().toISOString()
         });
         
-        await user.sendEmailVerification();
+        // Enviar email con OTP
+        const emailEnviado = await enviarEmailOTP(email, nombre, otp);
         
-        console.log('✅ Usuario registrado:', email);
-        
-        return {
-            success: true,
-            message: 'Registro exitoso. Revisa tu correo para verificar tu cuenta.',
-            user: user
-        };
+        if (emailEnviado) {
+            return { 
+                success: true, 
+                message: 'Revisa tu correo para verificar tu cuenta',
+                email: email 
+            };
+        } else {
+            return { 
+                success: false, 
+                message: 'Error al enviar el código. Verifica tu correo electrónico.' 
+            };
+        }
         
     } catch (error) {
-        console.error('❌ Error en registro:', error);
+        console.error('Error:', error);
         let mensaje = 'Error al registrar usuario';
         
         switch (error.code) {
@@ -48,269 +103,137 @@ async function registrarUsuario(email, password, nombre) {
                 break;
         }
         
-        return {
-            success: false,
-            message: mensaje,
-            error: error.code
-        };
+        return { success: false, message: mensaje };
     }
 }
 
-// ============================================
-// INICIO DE SESIÓN (CON NOTIFICACIONES)
-// ============================================
+async function verificarOTP(email, otpIngresado) {
+    try {
+        const usuariosRef = firebaseDB.collection('usuarios');
+        const query = await usuariosRef.where('email', '==', email).get();
+        
+        if (query.empty) {
+            return { success: false, message: 'Usuario no encontrado' };
+        }
+        
+        const userDoc = query.docs[0];
+        const userData = userDoc.data();
+        
+        if (!userData.otp) {
+            return { success: false, message: 'No hay código pendiente. Solicita uno nuevo.' };
+        }
+        
+        if (userData.otp !== otpIngresado) {
+            return { success: false, message: 'Código incorrecto' };
+        }
+        
+        if (Date.now() > userData.otpExpiry) {
+            return { success: false, message: 'El código ha expirado. Solicita uno nuevo.' };
+        }
+        
+        // Marcar como verificado
+        await userDoc.ref.update({
+            verificado: true,
+            otp: null,
+            otpExpiry: null
+        });
+        
+        return { success: true, message: 'Cuenta verificada exitosamente' };
+        
+    } catch (error) {
+        console.error('Error:', error);
+        return { success: false, message: 'Error al verificar' };
+    }
+}
+
 async function iniciarSesion(email, password) {
     try {
         const userCredential = await firebaseAuth.signInWithEmailAndPassword(email, password);
         const user = userCredential.user;
         
-        if (!user.emailVerified) {
+        const userDoc = await firebaseDB.collection('usuarios').doc(user.uid).get();
+        
+        if (!userDoc.exists) {
             await firebaseAuth.signOut();
-            return {
-                success: false,
-                message: 'Debes verificar tu cuenta. Revisa tu correo electrónico.'
+            return { success: false, message: 'Usuario no encontrado' };
+        }
+        
+        if (!userDoc.data().verificado) {
+            await firebaseAuth.signOut();
+            return { 
+                success: false, 
+                message: 'Debes verificar tu cuenta. Revisa tu correo.' 
             };
         }
         
-        const userDoc = await firebaseDB.collection('usuarios').doc(user.uid).get();
-        const userData = userDoc.exists ? userDoc.data() : { nombre: email.split('@')[0] };
-        
-        // Registrar token FCM después del login
-        if (typeof window.registrarTokenFCM === 'function') {
-            await window.registrarTokenFCM();
-        }
-        
-        // Mostrar notificación de bienvenida
-        if (typeof window.notificarEventoSistema === 'function') {
-            window.notificarEventoSistema('bienvenida', {});
-        }
-        
-        // Crear botón de notificaciones si no hay permiso
-        if (typeof window.crearBotonNotificaciones === 'function' && Notification.permission !== 'granted') {
-            setTimeout(() => window.crearBotonNotificaciones(), 1000);
-        }
-        
-        console.log('✅ Sesión iniciada:', email);
-        
-        return {
-            success: true,
-            message: `Bienvenido, ${userData.nombre}`,
+        return { 
+            success: true, 
+            message: `Bienvenido, ${userDoc.data().nombre}`,
             user: {
                 uid: user.uid,
                 email: user.email,
-                nombre: userData.nombre,
-                rol: userData.rol
+                nombre: userDoc.data().nombre
             }
         };
         
     } catch (error) {
-        console.error('❌ Error en login:', error);
+        console.error('Error:', error);
         let mensaje = 'Error al iniciar sesión';
+        if (error.code === 'auth/user-not-found' || error.code === 'auth/wrong-password') {
+            mensaje = 'Correo o contraseña incorrectos';
+        }
+        return { success: false, message: mensaje };
+    }
+}
+
+async function reenviarOTP(email) {
+    try {
+        const usuariosRef = firebaseDB.collection('usuarios');
+        const query = await usuariosRef.where('email', '==', email).get();
         
-        switch (error.code) {
-            case 'auth/user-not-found':
-            case 'auth/wrong-password':
-                mensaje = 'Correo o contraseña incorrectos';
-                break;
-            case 'auth/invalid-email':
-                mensaje = 'Correo electrónico inválido';
-                break;
-            case 'auth/user-disabled':
-                mensaje = 'Esta cuenta ha sido deshabilitada';
-                break;
+        if (query.empty) {
+            return { success: false, message: 'Usuario no encontrado' };
         }
         
-        return {
-            success: false,
-            message: mensaje,
-            error: error.code
-        };
-    }
-}
-
-// ============================================
-// CERRAR SESIÓN (ELIMINAR TOKEN FCM)
-// ============================================
-async function cerrarSesion() {
-    try {
-        // Eliminar token FCM
-        if (typeof window.eliminarTokenFCM === 'function') {
-            await window.eliminarTokenFCM();
+        const userDoc = query.docs[0];
+        const userData = userDoc.data();
+        
+        const nuevoOtp = generarOTP();
+        const nuevoExpiry = Date.now() + 15 * 60 * 1000;
+        
+        await userDoc.ref.update({
+            otp: nuevoOtp,
+            otpExpiry: nuevoExpiry
+        });
+        
+        const emailEnviado = await enviarEmailOTP(email, userData.nombre, nuevoOtp);
+        
+        if (emailEnviado) {
+            return { success: true, message: 'Código reenviado a tu correo' };
+        } else {
+            return { success: false, message: 'Error al reenviar el código' };
         }
         
-        await firebaseAuth.signOut();
-        console.log('✅ Sesión cerrada');
-        
-        return {
-            success: true,
-            message: 'Sesión cerrada exitosamente'
-        };
-        
     } catch (error) {
-        console.error('❌ Error al cerrar sesión:', error);
-        return {
-            success: false,
-            message: 'Error al cerrar sesión'
-        };
+        console.error('Error:', error);
+        return { success: false, message: 'Error al reenviar' };
     }
 }
 
-// ============================================
-// REENVIAR EMAIL DE VERIFICACIÓN
-// ============================================
-async function reenviarVerificacion() {
-    const user = firebaseAuth.currentUser;
-    if (!user) {
-        return {
-            success: false,
-            message: 'No hay sesión activa'
-        };
-    }
-    
-    try {
-        await user.sendEmailVerification();
-        return {
-            success: true,
-            message: 'Email de verificación reenviado. Revisa tu bandeja de entrada.'
-        };
-        
-    } catch (error) {
-        console.error('❌ Error al reenviar:', error);
-        return {
-            success: false,
-            message: 'Error al reenviar el email de verificación'
-        };
-    }
-}
-
-// ============================================
-// RESTABLECER CONTRASEÑA
-// ============================================
-async function restablecerPassword(email) {
-    try {
-        await firebaseAuth.sendPasswordResetEmail(email);
-        return {
-            success: true,
-            message: 'Email de restablecimiento enviado. Revisa tu correo.'
-        };
-        
-    } catch (error) {
-        console.error('❌ Error al restablecer:', error);
-        let mensaje = 'Error al enviar email de restablecimiento';
-        
-        if (error.code === 'auth/user-not-found') {
-            mensaje = 'No existe una cuenta con este correo';
-        }
-        
-        return {
-            success: false,
-            message: mensaje
-        };
-    }
-}
-
-// ============================================
-// OBTENER USUARIO ACTUAL
-// ============================================
 function obtenerUsuarioActual() {
-    const user = firebaseAuth.currentUser;
-    if (!user) return null;
-    
-    return {
-        uid: user.uid,
-        email: user.email,
-        emailVerified: user.emailVerified
-    };
+    return firebaseAuth.currentUser;
 }
 
-// ============================================
-// VERIFICAR SESIÓN ACTIVA
-// ============================================
 function haySesionActiva() {
     return firebaseAuth.currentUser !== null;
 }
 
-// ============================================
-// OBTENER DATOS DEL USUARIO
-// ============================================
-async function obtenerDatosUsuario(uid) {
-    try {
-        const userDoc = await firebaseDB.collection('usuarios').doc(uid).get();
-        if (userDoc.exists) {
-            return userDoc.data();
-        }
-        return null;
-        
-    } catch (error) {
-        console.error('❌ Error al obtener datos:', error);
-        return null;
-    }
-}
-
-// ============================================
-// ACTUALIZAR UI SEGÚN AUTENTICACIÓN
-// ============================================
-function actualizarUIUsuario() {
-    const user = firebaseAuth.currentUser;
-    const userNameSpan = document.getElementById('userName');
-    const registroLink = document.getElementById('registroNavLink');
-    const loginLink = document.getElementById('loginNavLink');
-    const logoutLink = document.getElementById('logoutNavLink');
-    const subirLink = document.getElementById('subirNavLink');
-    
-    if (user) {
-        firebaseDB.collection('usuarios').doc(user.uid).get().then(doc => {
-            const nombre = doc.exists ? doc.data().nombre : user.email.split('@')[0];
-            if (userNameSpan) userNameSpan.textContent = nombre;
-        });
-        
-        if (registroLink) registroLink.style.display = 'none';
-        if (loginLink) loginLink.style.display = 'none';
-        if (logoutLink) logoutLink.style.display = 'flex';
-        if (subirLink) subirLink.style.display = 'flex';
-        
-    } else {
-        if (userNameSpan) userNameSpan.textContent = 'Invitado';
-        if (registroLink) registroLink.style.display = 'flex';
-        if (loginLink) loginLink.style.display = 'flex';
-        if (logoutLink) logoutLink.style.display = 'none';
-        if (subirLink) subirLink.style.display = 'none';
-    }
-}
-
-// ============================================
-// ESCUCHAR CAMBIOS EN AUTENTICACIÓN
-// ============================================
-function initAuthListener() {
-    firebaseAuth.onAuthStateChanged(async (user) => {
-        actualizarUIUsuario();
-        
-        const event = new CustomEvent('authStateChanged', {
-            detail: { user: user }
-        });
-        document.dispatchEvent(event);
-        
-        if (user) {
-            console.log('👤 Usuario conectado:', user.email);
-        } else {
-            console.log('👤 Usuario desconectado');
-        }
-    });
-}
-
-// Exportar funciones
+// Exportar funciones globales
 window.registrarUsuario = registrarUsuario;
+window.verificarOTP = verificarOTP;
 window.iniciarSesion = iniciarSesion;
-window.cerrarSesion = cerrarSesion;
-window.reenviarVerificacion = reenviarVerificacion;
-window.restablecerPassword = restablecerPassword;
+window.reenviarOTP = reenviarOTP;
 window.obtenerUsuarioActual = obtenerUsuarioActual;
 window.haySesionActiva = haySesionActiva;
-window.obtenerDatosUsuario = obtenerDatosUsuario;
-window.actualizarUIUsuario = actualizarUIUsuario;
-window.initAuthListener = initAuthListener;
 
-// Inicializar
-document.addEventListener('DOMContentLoaded', () => {
-    initAuthListener();
-});
+console.log('✅ Auth.js cargado con EmailJS configurado');
