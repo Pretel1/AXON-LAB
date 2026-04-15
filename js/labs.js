@@ -1,8 +1,6 @@
 /**
  * AXON - LABS.JS
- * CRUD de laboratorios con Firestore y notificaciones
- * 
- * Proyecto: axon-labs-b720e
+ * CRUD de laboratorios con Firestore REAL
  */
 
 const COLLECTION_LABS = 'laboratorios';
@@ -14,15 +12,11 @@ async function obtenerLaboratorios(filtros = {}) {
     try {
         let query = firebaseDB.collection(COLLECTION_LABS);
         
-        // Aplicar filtros
         if (filtros.categoria && filtros.categoria !== 'todas') {
             query = query.where('categoria', '==', filtros.categoria);
         }
         
-        // Ordenar por fecha (más recientes primero)
-        query = query.orderBy('fecha', 'desc');
-        
-        const snapshot = await query.get();
+        const snapshot = await query.orderBy('fecha', 'desc').get();
         
         const laboratorios = [];
         snapshot.forEach(doc => {
@@ -32,7 +26,7 @@ async function obtenerLaboratorios(filtros = {}) {
             });
         });
         
-        // Filtrar por búsqueda en memoria (Firestore no soporta búsqueda nativa)
+        // Búsqueda en memoria
         if (filtros.search) {
             const searchTerm = filtros.search.toLowerCase();
             return laboratorios.filter(lab => 
@@ -44,13 +38,7 @@ async function obtenerLaboratorios(filtros = {}) {
         return laboratorios;
         
     } catch (error) {
-        console.error('❌ Error al obtener laboratorios:', error);
-        
-        // Mostrar notificación de error
-        if (typeof window.mostrarNotificacionLocal === 'function') {
-            window.mostrarNotificacionLocal('Error al cargar los laboratorios', 'error');
-        }
-        
+        console.error('❌ Error:', error);
         return [];
     }
 }
@@ -63,54 +51,45 @@ async function obtenerLaboratorioPorId(id) {
         const doc = await firebaseDB.collection(COLLECTION_LABS).doc(id).get();
         
         if (doc.exists) {
-            const laboratorio = {
-                id: doc.id,
-                ...doc.data()
-            };
-            
-            // Incrementar vistas en segundo plano (no esperar)
-            incrementarVistas(id).catch(console.error);
-            
-            return laboratorio;
+            incrementarVistas(id);
+            return { id: doc.id, ...doc.data() };
         }
-        
         return null;
         
     } catch (error) {
-        console.error('❌ Error al obtener laboratorio:', error);
+        console.error('❌ Error:', error);
         return null;
     }
 }
 
 // ============================================
-// AGREGAR LABORATORIO (CON NOTIFICACIONES)
+// SUBIR LABORATORIO CON ARCHIVO REAL
 // ============================================
-async function agregarLaboratorio(labData, archivo = null) {
+async function agregarLaboratorio(labData, archivoFile) {
     const user = firebaseAuth.currentUser;
     
     if (!user) {
-        if (typeof window.mostrarNotificacionLocal === 'function') {
-            window.mostrarNotificacionLocal('Debes iniciar sesión para subir laboratorios', 'warning');
-        }
-        return {
-            success: false,
-            message: 'Debes iniciar sesión'
-        };
+        mostrarNotificacion('Debes iniciar sesión', 'error');
+        return { success: false, message: 'Debes iniciar sesión' };
     }
     
     try {
         let archivoURL = '';
         let archivoNombre = '';
         
-        // Subir archivo si existe
-        if (archivo) {
-            const fileExt = archivo.name.split('.').pop();
-            const fileName = `${Date.now()}_${user.uid}.${fileExt}`;
-            const storageRef = firebaseStorage.ref(`laboratorios/${fileName}`);
+        // SUBIR ARCHIVO A STORAGE REAL
+        if (archivoFile && archivoFile instanceof File) {
+            const fileName = `laboratorios/${Date.now()}_${user.uid}_${archivoFile.name}`;
+            const storageRef = firebaseStorage.ref(fileName);
             
-            const uploadTask = await storageRef.put(archivo);
+            // Mostrar progreso de subida
+            console.log('📤 Subiendo archivo:', archivoFile.name);
+            
+            const uploadTask = await storageRef.put(archivoFile);
             archivoURL = await uploadTask.ref.getDownloadURL();
-            archivoNombre = archivo.name;
+            archivoNombre = archivoFile.name;
+            
+            console.log('✅ Archivo subido:', archivoURL);
         }
         
         // Procesar módulos
@@ -119,6 +98,7 @@ async function agregarLaboratorio(labData, archivo = null) {
             modulos = modulos.split(',').map(m => m.trim()).filter(m => m);
         }
         
+        // Guardar en Firestore
         const nuevoLab = {
             nombre: labData.nombre,
             autor: labData.autor,
@@ -138,21 +118,8 @@ async function agregarLaboratorio(labData, archivo = null) {
         
         const docRef = await firebaseDB.collection(COLLECTION_LABS).add(nuevoLab);
         
-        // NOTIFICAR NUEVO LABORATORIO
-        if (typeof window.notificarEventoSistema === 'function') {
-            window.notificarEventoSistema('laboratorio_subido', {
-                nombre: labData.nombre,
-                autor: labData.autor,
-                id: docRef.id
-            });
-        }
-        
-        // Mostrar notificación local
-        if (typeof window.mostrarNotificacionLocal === 'function') {
-            window.mostrarNotificacionLocal('✅ Laboratorio subido exitosamente', 'success');
-        }
-        
-        console.log('✅ Laboratorio agregado:', docRef.id);
+        mostrarNotificacion('✅ Laboratorio subido exitosamente', 'success');
+        console.log('✅ Laboratorio guardado en Firestore:', docRef.id);
         
         return {
             success: true,
@@ -161,43 +128,38 @@ async function agregarLaboratorio(labData, archivo = null) {
         };
         
     } catch (error) {
-        console.error('❌ Error al agregar laboratorio:', error);
-        
-        if (typeof window.mostrarNotificacionLocal === 'function') {
-            window.mostrarNotificacionLocal('❌ Error al subir el laboratorio', 'error');
-        }
-        
+        console.error('❌ Error detallado:', error);
+        mostrarNotificacion('❌ Error: ' + error.message, 'error');
         return {
             success: false,
-            message: 'Error al subir el laboratorio: ' + error.message
+            message: error.message
         };
     }
 }
 
 // ============================================
-// ACTUALIZAR LABORATORIO
+// INCREMENTAR DESCARGAS
 // ============================================
-async function actualizarLaboratorio(id, data) {
+async function incrementarDescargas(id) {
     try {
         await firebaseDB.collection(COLLECTION_LABS).doc(id).update({
-            ...data,
-            updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+            descargas: firebase.firestore.FieldValue.increment(1)
         });
-        
-        if (typeof window.mostrarNotificacionLocal === 'function') {
-            window.mostrarNotificacionLocal('✅ Laboratorio actualizado', 'success');
-        }
-        
-        return { success: true, message: 'Laboratorio actualizado' };
-        
     } catch (error) {
-        console.error('❌ Error al actualizar:', error);
-        
-        if (typeof window.mostrarNotificacionLocal === 'function') {
-            window.mostrarNotificacionLocal('❌ Error al actualizar', 'error');
-        }
-        
-        return { success: false, message: 'Error al actualizar' };
+        console.error('Error:', error);
+    }
+}
+
+// ============================================
+// INCREMENTAR VISTAS
+// ============================================
+async function incrementarVistas(id) {
+    try {
+        await firebaseDB.collection(COLLECTION_LABS).doc(id).update({
+            vistas: firebase.firestore.FieldValue.increment(1)
+        });
+    } catch (error) {
+        console.error('Error:', error);
     }
 }
 
@@ -211,89 +173,30 @@ async function eliminarLaboratorio(id) {
     }
     
     try {
-        // Obtener laboratorio para verificar permisos
         const lab = await obtenerLaboratorioPorId(id);
-        
         if (!lab) {
             return { success: false, message: 'Laboratorio no encontrado' };
         }
         
-        // Verificar que el usuario sea el dueño o admin
-        if (lab.usuarioId !== user.uid) {
-            const userDoc = await firebaseDB.collection('usuarios').doc(user.uid).get();
-            if (userDoc.data()?.rol !== 'admin') {
-                return { success: false, message: 'No tienes permiso para eliminar este laboratorio' };
-            }
-        }
-        
-        // Eliminar archivo de Storage si existe
+        // Eliminar archivo de Storage
         if (lab.archivoURL) {
             try {
                 const storageRef = firebaseStorage.refFromURL(lab.archivoURL);
                 await storageRef.delete();
             } catch (e) {
-                console.warn('No se pudo eliminar el archivo:', e);
+                console.warn('No se pudo eliminar archivo:', e);
             }
         }
         
-        // Eliminar documento de Firestore
+        // Eliminar de Firestore
         await firebaseDB.collection(COLLECTION_LABS).doc(id).delete();
         
-        // Eliminar progresos asociados
-        const progresosSnapshot = await firebaseDB.collection('progreso')
-            .where('laboratorioId', '==', id)
-            .get();
-        
-        const batch = firebaseDB.batch();
-        progresosSnapshot.forEach(doc => {
-            batch.delete(doc.ref);
-        });
-        await batch.commit();
-        
-        if (typeof window.mostrarNotificacionLocal === 'function') {
-            window.mostrarNotificacionLocal('✅ Laboratorio eliminado', 'success');
-        }
-        
+        mostrarNotificacion('✅ Laboratorio eliminado', 'success');
         return { success: true, message: 'Laboratorio eliminado' };
         
     } catch (error) {
-        console.error('❌ Error al eliminar:', error);
-        
-        if (typeof window.mostrarNotificacionLocal === 'function') {
-            window.mostrarNotificacionLocal('❌ Error al eliminar', 'error');
-        }
-        
-        return { success: false, message: 'Error al eliminar' };
-    }
-}
-
-// ============================================
-// INCREMENTAR DESCARGAS
-// ============================================
-async function incrementarDescargas(id) {
-    try {
-        const labRef = firebaseDB.collection(COLLECTION_LABS).doc(id);
-        await labRef.update({
-            descargas: firebase.firestore.FieldValue.increment(1)
-        });
-        
-    } catch (error) {
-        console.error('❌ Error al incrementar descargas:', error);
-    }
-}
-
-// ============================================
-// INCREMENTAR VISTAS
-// ============================================
-async function incrementarVistas(id) {
-    try {
-        const labRef = firebaseDB.collection(COLLECTION_LABS).doc(id);
-        await labRef.update({
-            vistas: firebase.firestore.FieldValue.increment(1)
-        });
-        
-    } catch (error) {
-        console.error('❌ Error al incrementar vistas:', error);
+        console.error('Error:', error);
+        return { success: false, message: error.message };
     }
 }
 
@@ -301,25 +204,6 @@ async function incrementarVistas(id) {
 // OBTENER CATEGORÍAS
 // ============================================
 async function obtenerCategorias() {
-    try {
-        // Intentar obtener de Firestore primero
-        const snapshot = await firebaseDB.collection('categorias').get();
-        
-        if (!snapshot.empty) {
-            const categorias = [];
-            snapshot.forEach(doc => {
-                categorias.push({
-                    id: doc.id,
-                    ...doc.data()
-                });
-            });
-            return categorias;
-        }
-    } catch (error) {
-        console.log('Usando categorías por defecto');
-    }
-    
-    // Categorías por defecto
     return [
         { id: "redes", nombre: "Redes", icono: "🌐", color: "#00d4ff" },
         { id: "programacion", nombre: "Programación", icono: "💻", color: "#00ff88" },
@@ -329,9 +213,6 @@ async function obtenerCategorias() {
     ];
 }
 
-// ============================================
-// OBTENER ICONO POR CATEGORÍA
-// ============================================
 function obtenerIconoCategoria(categoria) {
     const iconos = {
         'redes': '🌐',
@@ -343,9 +224,6 @@ function obtenerIconoCategoria(categoria) {
     return iconos[categoria] || '📚';
 }
 
-// ============================================
-// OBTENER NOMBRE DE CATEGORÍA
-// ============================================
 function obtenerNombreCategoria(categoria) {
     const nombres = {
         'redes': 'Redes',
@@ -357,18 +235,14 @@ function obtenerNombreCategoria(categoria) {
     return nombres[categoria] || categoria;
 }
 
-// ============================================
-// FILTRAR LABORATORIOS (cliente)
-// ============================================
 function filtrarLaboratorios(laboratorios, searchTerm, categoria) {
     let resultados = [...laboratorios];
     
-    if (searchTerm && searchTerm.trim()) {
-        const term = searchTerm.toLowerCase().trim();
+    if (searchTerm) {
+        const term = searchTerm.toLowerCase();
         resultados = resultados.filter(lab =>
             lab.nombre.toLowerCase().includes(term) ||
-            lab.autor.toLowerCase().includes(term) ||
-            (lab.descripcion && lab.descripcion.toLowerCase().includes(term))
+            lab.autor.toLowerCase().includes(term)
         );
     }
     
@@ -379,98 +253,30 @@ function filtrarLaboratorios(laboratorios, searchTerm, categoria) {
     return resultados;
 }
 
-// ============================================
-// OBTENER LABORATORIOS POR CATEGORÍA
-// ============================================
-async function obtenerLaboratoriosPorCategoria(categoria) {
-    try {
-        const snapshot = await firebaseDB.collection(COLLECTION_LABS)
-            .where('categoria', '==', categoria)
-            .orderBy('fecha', 'desc')
-            .get();
-        
-        const laboratorios = [];
-        snapshot.forEach(doc => {
-            laboratorios.push({
-                id: doc.id,
-                ...doc.data()
-            });
-        });
-        
-        return laboratorios;
-        
-    } catch (error) {
-        console.error('❌ Error al obtener laboratorios por categoría:', error);
-        return [];
-    }
+// Funciones helper
+function mostrarNotificacion(mensaje, tipo) {
+    const notificacion = document.createElement('div');
+    notificacion.className = `alert alert-${tipo}`;
+    notificacion.textContent = mensaje;
+    notificacion.style.cssText = `
+        position: fixed;
+        bottom: 20px;
+        right: 20px;
+        z-index: 1000;
+        max-width: 300px;
+        animation: slideInRight 0.3s ease;
+    `;
+    document.body.appendChild(notificacion);
+    setTimeout(() => notificacion.remove(), 3000);
 }
 
-// ============================================
-// OBTENER LABORATORIOS RECIENTES
-// ============================================
-async function obtenerLaboratoriosRecientes(limit = 6) {
-    try {
-        const snapshot = await firebaseDB.collection(COLLECTION_LABS)
-            .orderBy('fecha', 'desc')
-            .limit(limit)
-            .get();
-        
-        const laboratorios = [];
-        snapshot.forEach(doc => {
-            laboratorios.push({
-                id: doc.id,
-                ...doc.data()
-            });
-        });
-        
-        return laboratorios;
-        
-    } catch (error) {
-        console.error('❌ Error al obtener laboratorios recientes:', error);
-        return [];
-    }
-}
-
-// ============================================
-// OBTENER LABORATORIOS DESTACADOS (más descargados)
-// ============================================
-async function obtenerLaboratoriosDestacados(limit = 5) {
-    try {
-        const snapshot = await firebaseDB.collection(COLLECTION_LABS)
-            .orderBy('descargas', 'desc')
-            .limit(limit)
-            .get();
-        
-        const laboratorios = [];
-        snapshot.forEach(doc => {
-            laboratorios.push({
-                id: doc.id,
-                ...doc.data()
-            });
-        });
-        
-        return laboratorios;
-        
-    } catch (error) {
-        console.error('❌ Error al obtener laboratorios destacados:', error);
-        return [];
-    }
-}
-
-// ============================================
-// EXPORTAR FUNCIONES GLOBALES
-// ============================================
+// Exportar
 window.obtenerLaboratorios = obtenerLaboratorios;
 window.obtenerLaboratorioPorId = obtenerLaboratorioPorId;
 window.agregarLaboratorio = agregarLaboratorio;
-window.actualizarLaboratorio = actualizarLaboratorio;
 window.eliminarLaboratorio = eliminarLaboratorio;
 window.incrementarDescargas = incrementarDescargas;
-window.incrementarVistas = incrementarVistas;
 window.obtenerCategorias = obtenerCategorias;
 window.obtenerIconoCategoria = obtenerIconoCategoria;
 window.obtenerNombreCategoria = obtenerNombreCategoria;
 window.filtrarLaboratorios = filtrarLaboratorios;
-window.obtenerLaboratoriosPorCategoria = obtenerLaboratoriosPorCategoria;
-window.obtenerLaboratoriosRecientes = obtenerLaboratoriosRecientes;
-window.obtenerLaboratoriosDestacados = obtenerLaboratoriosDestacados;
