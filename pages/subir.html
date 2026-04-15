@@ -1,0 +1,230 @@
+<!-- ============================================ -->
+<!-- PÁGINA: SUBIR LABORATORIO                    -->
+<!-- ============================================ -->
+
+<div class="page fade-in">
+    <div class="container" style="max-width: 700px;">
+        <div class="page-header" style="text-align: center; margin-bottom: var(--space-xl);">
+            <h1>📤 <span class="highlight">Subir Laboratorio</span></h1>
+            <p style="color: var(--color-gray);">Comparte tu conocimiento con la comunidad académica</p>
+        </div>
+
+        <!-- Verificar si el usuario está logueado -->
+        <div id="loginRequiredMsg" style="display: none; text-align: center; padding: var(--space-2xl); background: var(--color-card); border-radius: var(--radius-xl); border: 1px solid var(--color-border);">
+            <span style="font-size: 4rem;">🔒</span>
+            <h2>Acceso restringido</h2>
+            <p style="color: var(--color-gray); margin: var(--space-md) 0;">Debes iniciar sesión para subir laboratorios</p>
+            <button id="goToLoginBtn" class="btn btn-primary">🔑 Iniciar Sesión</button>
+        </div>
+
+        <!-- Formulario de subida (solo visible para usuarios logueados) -->
+        <div id="uploadFormContainer" class="form-container" style="display: none;">
+            <form id="uploadForm" class="upload-form">
+                <div class="form-group">
+                    <label for="labNombre">Nombre del Laboratorio *</label>
+                    <input type="text" id="labNombre" name="nombre" required placeholder="Ej: Introducción a Redes TCP/IP">
+                    <span class="error-message" id="errorNombre">El nombre es requerido</span>
+                </div>
+
+                <div class="form-group">
+                    <label for="labAutor">Autor(es) *</label>
+                    <input type="text" id="labAutor" name="autor" required placeholder="Ej: Dr. Juan Pérez">
+                    <span class="error-message" id="errorAutor">El autor es requerido</span>
+                </div>
+
+                <div class="form-group">
+                    <label for="labCategoria">Categoría *</label>
+                    <select id="labCategoria" name="categoria" required>
+                        <option value="">Selecciona una categoría</option>
+                        <option value="redes">🌐 Redes</option>
+                        <option value="programacion">💻 Programación</option>
+                        <option value="bases-datos">🗄️ Bases de Datos</option>
+                        <option value="inteligencia">🧠 Inteligencia Artificial</option>
+                        <option value="seguridad">🔒 Seguridad</option>
+                    </select>
+                    <span class="error-message" id="errorCategoria">Selecciona una categoría</span>
+                </div>
+
+                <div class="form-group">
+                    <label for="labDescripcion">Descripción</label>
+                    <textarea id="labDescripcion" name="descripcion" rows="4" placeholder="Describe el contenido del laboratorio..."></textarea>
+                </div>
+
+                <div class="form-group">
+                    <label for="labModulos">Módulos (separados por coma)</label>
+                    <input type="text" id="labModulos" placeholder="Ej: Módulo 1, Módulo 2, Módulo 3">
+                    <small>Ingresa los nombres de los módulos separados por coma</small>
+                </div>
+
+                <div class="form-group">
+                    <label for="labArchivo">Archivo *</label>
+                    <input type="file" id="labArchivo" name="archivo" accept=".pdf,.zip,.docx">
+                    <small>Formatos permitidos: PDF, ZIP, DOCX (máx. 10MB)</small>
+                    <span class="error-message" id="errorArchivo">Selecciona un archivo</span>
+                </div>
+
+                <div class="form-actions">
+                    <button type="submit" class="btn btn-primary">📤 Subir Laboratorio</button>
+                    <button type="reset" class="btn btn-outline">🗑️ Limpiar</button>
+                </div>
+            </form>
+
+            <div id="uploadSuccess" class="alert alert-success" style="display: none;">
+                ✅ ¡Laboratorio subido exitosamente!
+            </div>
+            <div id="uploadError" class="alert alert-error" style="display: none;">
+                ❌ Error al subir el laboratorio. Verifica los datos.
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // Verificar si el usuario está logueado
+    function verificarLogin() {
+        const usuarioActual = localStorage.getItem('axon_usuario_actual');
+        const loginRequiredMsg = document.getElementById('loginRequiredMsg');
+        const uploadFormContainer = document.getElementById('uploadFormContainer');
+        
+        if (!usuarioActual) {
+            if (loginRequiredMsg) loginRequiredMsg.style.display = 'block';
+            if (uploadFormContainer) uploadFormContainer.style.display = 'none';
+        } else {
+            if (loginRequiredMsg) loginRequiredMsg.style.display = 'none';
+            if (uploadFormContainer) uploadFormContainer.style.display = 'block';
+            
+            // Mostrar nombre del usuario logueado
+            try {
+                const usuarios = JSON.parse(localStorage.getItem('axon_usuarios') || '[]');
+                const usuario = usuarios.find(u => u.email === usuarioActual);
+                if (usuario) {
+                    const autorInput = document.getElementById('labAutor');
+                    if (autorInput && !autorInput.value) {
+                        autorInput.value = usuario.nombre || usuario.email.split('@')[0];
+                    }
+                }
+            } catch(e) {}
+        }
+    }
+    
+    // Subir laboratorio
+    function inicializarFormulario() {
+        const form = document.getElementById('uploadForm');
+        if (!form) return;
+        
+        form.addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            // Validar campos
+            const nombre = document.getElementById('labNombre').value.trim();
+            const autor = document.getElementById('labAutor').value.trim();
+            const categoria = document.getElementById('labCategoria').value;
+            const archivo = document.getElementById('labArchivo').files[0];
+            
+            let isValid = true;
+            
+            if (!nombre) {
+                document.getElementById('errorNombre').style.display = 'block';
+                isValid = false;
+            } else {
+                document.getElementById('errorNombre').style.display = 'none';
+            }
+            
+            if (!autor) {
+                document.getElementById('errorAutor').style.display = 'block';
+                isValid = false;
+            } else {
+                document.getElementById('errorAutor').style.display = 'none';
+            }
+            
+            if (!categoria) {
+                document.getElementById('errorCategoria').style.display = 'block';
+                isValid = false;
+            } else {
+                document.getElementById('errorCategoria').style.display = 'none';
+            }
+            
+            if (!archivo) {
+                document.getElementById('errorArchivo').style.display = 'block';
+                isValid = false;
+            } else {
+                document.getElementById('errorArchivo').style.display = 'none';
+            }
+            
+            if (!isValid) return;
+            
+            // Crear nuevo laboratorio
+            const modulosInput = document.getElementById('labModulos').value;
+            const modulos = modulosInput ? modulosInput.split(',').map(m => m.trim()) : ['Módulo 1', 'Módulo 2', 'Módulo 3'];
+            
+            const nuevoLaboratorio = {
+                id: Date.now(),
+                nombre: nombre,
+                autor: autor,
+                categoria: categoria,
+                descripcion: document.getElementById('labDescripcion').value,
+                archivo: archivo.name,
+                fecha: new Date().toISOString().split('T')[0],
+                descargas: 0,
+                vistas: 0,
+                modulos: modulos,
+                icono: { redes: '🌐', programacion: '💻', 'bases-datos': '🗄️', inteligencia: '🧠', seguridad: '🔒' }[categoria] || '📚'
+            };
+            
+            // Guardar en localStorage
+            let laboratorios = [];
+            const guardados = localStorage.getItem('axon_laboratorios');
+            if (guardados) {
+                laboratorios = JSON.parse(guardados);
+            } else {
+                laboratorios = [
+                    { id: 1, nombre: "Introducción a Redes TCP/IP", autor: "Dr. Carlos Martínez", categoria: "redes", descripcion: "Laboratorio básico.", archivo: "lab1.pdf", fecha: "2024-01-15", descargas: 245, vistas: 1250, icono: "🌐", modulos: ["Módulo 1", "Módulo 2", "Módulo 3"] }
+                ];
+            }
+            
+            laboratorios.unshift(nuevoLaboratorio);
+            localStorage.setItem('axon_laboratorios', JSON.stringify(laboratorios));
+            
+            // Mostrar éxito y resetear formulario
+            document.getElementById('uploadSuccess').style.display = 'block';
+            document.getElementById('uploadError').style.display = 'none';
+            form.reset();
+            
+            setTimeout(() => {
+                document.getElementById('uploadSuccess').style.display = 'none';
+            }, 3000);
+        });
+        
+        // Resetear formulario
+        form.querySelector('button[type="reset"]')?.addEventListener('click', () => {
+            setTimeout(() => {
+                document.querySelectorAll('.error-message').forEach(el => el.style.display = 'none');
+                document.getElementById('uploadSuccess').style.display = 'none';
+                document.getElementById('uploadError').style.display = 'none';
+            }, 100);
+        });
+    }
+    
+    // Inicializar
+    function inicializarSubir() {
+        verificarLogin();
+        inicializarFormulario();
+        
+        const goToLoginBtn = document.getElementById('goToLoginBtn');
+        if (goToLoginBtn) {
+            goToLoginBtn.addEventListener('click', () => {
+                if (typeof window.cambiarPagina === 'function') {
+                    window.cambiarPagina('login');
+                } else {
+                    window.location.href = '#login';
+                }
+            });
+        }
+    }
+    
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', inicializarSubir);
+    } else {
+        inicializarSubir();
+    }
+</script>

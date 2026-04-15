@@ -1,0 +1,164 @@
+<!-- ============================================ -->
+<!-- PÁGINA: VERIFICACIÓN OTP                     -->
+<!-- ============================================ -->
+
+<div class="page fade-in">
+    <div class="container" style="max-width: 500px;">
+        <div class="page-header" style="text-align: center; margin-bottom: var(--space-xl);">
+            <h1>🔐 <span class="highlight">Verificar Cuenta</span></h1>
+            <p style="color: var(--color-gray);">Ingresa el código de verificación enviado a tu correo</p>
+        </div>
+
+        <div class="form-container">
+            <form id="verificacionForm">
+                <div class="form-group">
+                    <label for="otpCode">Código de verificación (OTP)</label>
+                    <input type="text" id="otpCode" maxlength="6" placeholder="Ingresa el código de 6 dígitos" required>
+                    <span class="error-message" id="errorOtp">Código inválido</span>
+                </div>
+
+                <div class="form-actions">
+                    <button type="submit" class="btn btn-primary">✅ Verificar</button>
+                </div>
+            </form>
+
+            <p style="text-align: center; margin-top: var(--space-lg); color: var(--color-gray);">
+                ¿No recibiste el código? <a href="#" id="reenviarOtp" style="color: var(--color-primary);">Reenviar código</a>
+            </p>
+
+            <div id="verificacionSuccess" class="alert alert-success" style="display: none;">
+                ✅ ¡Cuenta verificada! Redirigiendo al inicio...
+            </div>
+            <div id="verificacionError" class="alert alert-error" style="display: none;">
+                ❌ Código incorrecto. Intenta nuevamente.
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    let emailVerificacion = null;
+    
+    function obtenerEmailDeURL() {
+        const hash = window.location.hash;
+        const match = hash.match(/[?&]email=([^&]+)/);
+        if (match) return decodeURIComponent(match[1]);
+        
+        const urlParams = new URLSearchParams(window.location.search);
+        return urlParams.get('email');
+    }
+    
+    function inicializarVerificacion() {
+        emailVerificacion = obtenerEmailDeURL();
+        
+        // También verificar en el OTP temporal
+        if (!emailVerificacion) {
+            const otpTemp = localStorage.getItem('axon_otp_temp');
+            if (otpTemp) {
+                try {
+                    const data = JSON.parse(otpTemp);
+                    emailVerificacion = data.email;
+                } catch(e) {}
+            }
+        }
+        
+        if (!emailVerificacion) {
+            document.getElementById('verificacionError').style.display = 'block';
+            document.getElementById('verificacionError').innerHTML = '❌ No se encontró información de verificación. Regístrate nuevamente.';
+            return;
+        }
+        
+        const form = document.getElementById('verificacionForm');
+        
+        form.addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const otpIngresado = document.getElementById('otpCode').value.trim();
+            
+            // Obtener OTP correcto
+            let otpCorrecto = null;
+            const otpTemp = localStorage.getItem('axon_otp_temp');
+            if (otpTemp) {
+                try {
+                    const data = JSON.parse(otpTemp);
+                    if (data.email === emailVerificacion) {
+                        otpCorrecto = data.otp;
+                    }
+                } catch(e) {}
+            }
+            
+            // También buscar en el usuario
+            if (!otpCorrecto) {
+                const usuariosGuardados = localStorage.getItem('axon_usuarios');
+                if (usuariosGuardados) {
+                    const usuarios = JSON.parse(usuariosGuardados);
+                    const usuario = usuarios.find(u => u.email === emailVerificacion);
+                    if (usuario) {
+                        otpCorrecto = usuario.otp;
+                    }
+                }
+            }
+            
+            if (otpIngresado === otpCorrecto) {
+                // Marcar usuario como verificado
+                const usuariosGuardados = localStorage.getItem('axon_usuarios');
+                if (usuariosGuardados) {
+                    let usuarios = JSON.parse(usuariosGuardados);
+                    const index = usuarios.findIndex(u => u.email === emailVerificacion);
+                    if (index !== -1) {
+                        usuarios[index].verificado = true;
+                        delete usuarios[index].otp;
+                        localStorage.setItem('axon_usuarios', JSON.stringify(usuarios));
+                    }
+                }
+                
+                // Limpiar OTP temporal
+                localStorage.removeItem('axon_otp_temp');
+                
+                document.getElementById('verificacionSuccess').style.display = 'block';
+                
+                setTimeout(() => {
+                    if (typeof window.cambiarPagina === 'function') {
+                        window.cambiarPagina('login');
+                    } else {
+                        window.location.href = '#login';
+                    }
+                }, 2000);
+            } else {
+                document.getElementById('verificacionError').style.display = 'block';
+                setTimeout(() => {
+                    document.getElementById('verificacionError').style.display = 'none';
+                }, 3000);
+            }
+        });
+        
+        document.getElementById('reenviarOtp').addEventListener('click', function(e) {
+            e.preventDefault();
+            
+            // Generar nuevo OTP
+            const nuevoOtp = Math.floor(100000 + Math.random() * 900000).toString();
+            
+            // Actualizar en localStorage
+            const usuariosGuardados = localStorage.getItem('axon_usuarios');
+            if (usuariosGuardados) {
+                let usuarios = JSON.parse(usuariosGuardados);
+                const index = usuarios.findIndex(u => u.email === emailVerificacion);
+                if (index !== -1) {
+                    usuarios[index].otp = nuevoOtp;
+                    localStorage.setItem('axon_usuarios', JSON.stringify(usuarios));
+                }
+            }
+            
+            localStorage.setItem('axon_otp_temp', JSON.stringify({ email: emailVerificacion, otp: nuevoOtp }));
+            
+            console.log(`📧 Nuevo código OTP para ${emailVerificacion}: ${nuevoOtp}`);
+            alert(`📧 Simulación: Tu nuevo código de verificación es: ${nuevoOtp}`);
+        });
+    }
+    
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', inicializarVerificacion);
+    } else {
+        inicializarVerificacion();
+    }
+</script>

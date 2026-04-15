@@ -1,0 +1,379 @@
+/* ============================================
+   AXON - ESTILOS GLOBALES
+   Variables, reset y estilos base
+   ============================================ */
+
+/* ============================================
+   1. VARIABLES GLOBALES (Design Tokens)
+   ============================================ */
+:root {
+    /* Colores principales - Tema Cyberpunk */
+    --color-primary: #00d4ff;
+    --color-primary-dark: #0099cc;
+    --color-primary-light: #33ddff;
+    --color-secondary: #b300ff;
+    --color-secondary-dark: #8a00cc;
+    --color-secondary-light: #cc33ff;
+    --color-accent: #ff00ff;
+    --color-success: #00ff88;
+    --color-success-dark: #00cc6a;
+    --color-warning: #ffaa00;
+    --color-warning-dark: #cc8800;
+    --color-error: #ff3366;
+    --color-error-dark: #cc2952;
+    
+    /* Colores de fondo */
+    --bg-primary: #0a0a0f;
+    --bg-secondary: #050508;
+    --bg-card: rgba(15, 15, 25, 0.95);
+    --bg-card-solid: #0f0f19;
+    --bg-sidebar: rgba(5, 5, 8, 0.98);
+    --bg-header: rgba(5, 5, 8, 0.95);
+    --bg-light: #1a1a2e;
+    --bg-hover: rgba(0, 212, 255, 0.05);
+    
+    /* Colores de texto */
+    --text-primary: #ffffff;
+    --text-secondary: #a0a0b0;
+    --text-muted: #6b6b7a;
+    --text-disabled: #4a4a5a;
+    
+    /* Colores de borde */
+    --border-color: rgba(0, 212, 255, 0.2);
+    --border-color-light: rgba(0, 212, 255, 0.1);
+    --border-color-dark: rgba(0, 212, 255, 0.3);
+    
+    /* Espaciados (escala 4px) */
+    --space-0: 0;
+    --space-1: 0.25rem;    /* 4px */
+    --space-2: 0.5rem;     /* 8px */
+    --space-3: 0.75rem;    /* 12px */
+    --space-4: 1rem;       /* 16px */
+    --space-5: 1.25rem;    /* 20px */
+    --space-6: 1.5rem;     /* 24px */
+    --space-8: 2rem;       /* 32px */
+    --space-10: 2.5rem;    /* 40px */
+    --space-12: 3rem;      /* 48px */
+    --space-16: 4rem;      /* 64px */
+    --space-20: 5rem;      /* 80px */
+    --space-24: 6rem;      /* 96px */
+    --space-32: 8rem;      /* 128px */
+    
+    /* Tipografía */
+    --font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
+    --font-mono: 'Courier New', 'SF Mono', Monaco, monospace;
+    
+    /* Tamaños de fuente */
+    --text-xs: 0.75rem;     /* 12px */
+    --text-sm: 0.875rem;    /* 14px */
+    --text-base: 1rem;      /* 16px */
+    --text-lg: 1.125rem;    /* 18px */
+    --text-xl: 1.25rem;     /* 20px */
+    --text-2xl: 1.5rem;     /* 24px */
+    --text-3xl: 1.875rem;   /* 30px */
+    --text-4xl: 2.25rem;    /* 36px */
+    --text-5xl: 3rem;       /* 48px */
+    --text-6xl: 3.75rem;    /* 60px */
+    
+    /* Pesos de fuente */
+    --font-light: 300;
+    --font-regular: 400;
+    --font-medium: 500;
+    --font-semibold: 600;
+    --font-bold: 700;
+    
+    /* Alturas de línea */
+    --leading-none: 1;
+    --leading-tight: 1.25;
+    --leading-snug: 1.375;
+    --leading-normal: 1.5;
+    --leading-relaxed: 1.625;
+    --leading-loose: 2;
+    
+    /* Bordes */
+    --radius-none: 0;
+    --radius-sm: 0.25rem;   /* 4px */
+    --radius-md: 0.375rem;  /* 6px */
+    --radius-lg: 0.5rem;    /* 8px */
+    --radius-xl: 0.75rem;   /* 12px */
+    --radius-2xl: 1rem;     /* 16px */
+    --radius-3xl: 1.5rem;   /* 24px */
+    --radius-full: 9999px;
+    
+    /* Sombras */
+    --shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.3);
+    --shadow-sm: 0 2px 4px rgba(0, 0, 0, 0.3);
+    --shadow-md: 0 4px 8px rgba(0, 0, 0, 0.4);
+    --shadow-lg: 0 8px 16px rgba(0, 0, 0, 0.5);
+    --shadow-xl: 0 16px 32px rgba(0, 0, 0, 0.6);
+    --shadow-glow: 0 0 20px rgba(0, 212, 255, 0.3);
+    --shadow-glow-sm: 0 0 10px rgba(0, 212, 255, 0.2);
+    --shadow-glow-pink: 0 0 20px rgba(179, 0, 255, 0.3);
+    --shadow-inset: inset 0 2px 4px rgba(0, 0, 0, 0.2);
+    
+    /* Transiciones */
+    --transition-fast: 0.15s ease;
+    --transition-base: 0.25s ease;
+    --transition-slow: 0.4s ease;
+    --transition-slower: 0.6s ease;
+    
+    /* Z-index */
+    --z-negative: -1;
+    --z-elevate: 1;
+    --z-sticky: 100;
+    --z-header: 200;
+    --z-sidebar: 300;
+    --z-overlay: 350;
+    --z-modal: 400;
+    --z-popover: 500;
+    --z-toast: 600;
+    
+    /* Layout */
+    --sidebar-width: 280px;
+    --sidebar-width-collapsed: 80px;
+    --container-max: 1280px;
+    --container-padding: var(--space-6);
+}
+
+/* ============================================
+   2. RESET Y ESTILOS BASE
+   ============================================ */
+*,
+*::before,
+*::after {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+html {
+    font-size: 16px;
+    scroll-behavior: smooth;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+}
+
+body {
+    font-family: var(--font-family);
+    font-size: var(--text-base);
+    line-height: var(--leading-normal);
+    background: linear-gradient(135deg, var(--bg-secondary) 0%, var(--bg-primary) 100%);
+    color: var(--text-primary);
+    min-height: 100vh;
+    overflow-x: hidden;
+}
+
+/* Tipografía */
+h1, h2, h3, h4, h5, h6 {
+    font-weight: var(--font-bold);
+    line-height: var(--leading-tight);
+    color: var(--text-primary);
+}
+
+h1 { font-size: var(--text-5xl); }
+h2 { font-size: var(--text-4xl); }
+h3 { font-size: var(--text-2xl); }
+h4 { font-size: var(--text-xl); }
+h5 { font-size: var(--text-lg); }
+h6 { font-size: var(--text-base); }
+
+/* Enlaces */
+a {
+    text-decoration: none;
+    color: inherit;
+    transition: color var(--transition-fast);
+}
+
+a:hover {
+    color: var(--color-primary);
+}
+
+/* Listas */
+ul, ol {
+    list-style: none;
+}
+
+/* Imágenes */
+img,
+picture,
+video,
+canvas,
+svg {
+    display: block;
+    max-width: 100%;
+    height: auto;
+}
+
+img {
+    object-fit: cover;
+}
+
+/* Formularios */
+input,
+button,
+textarea,
+select {
+    font: inherit;
+    color: inherit;
+}
+
+button {
+    background: none;
+    border: none;
+    cursor: pointer;
+}
+
+/* Selección de texto */
+::selection {
+    background: var(--color-primary);
+    color: var(--bg-secondary);
+}
+
+/* Scrollbar personalizada */
+::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
+
+::-webkit-scrollbar-track {
+    background: var(--bg-secondary);
+}
+
+::-webkit-scrollbar-thumb {
+    background: var(--color-primary);
+    border-radius: var(--radius-sm);
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: var(--color-primary-dark);
+}
+
+/* ============================================
+   3. UTILIDADES GLOBALES
+   ============================================ */
+
+/* Contenedores */
+.container {
+    max-width: var(--container-max);
+    margin: 0 auto;
+    padding: 0 var(--container-padding);
+    width: 100%;
+}
+
+.container-fluid {
+    width: 100%;
+    padding: 0 var(--container-padding);
+}
+
+/* Secciones */
+.section {
+    padding: var(--space-16) 0;
+}
+
+.section-sm {
+    padding: var(--space-8) 0;
+}
+
+.section-lg {
+    padding: var(--space-24) 0;
+}
+
+/* Colores de fondo */
+.bg-primary { background: var(--bg-primary); }
+.bg-secondary { background: var(--bg-secondary); }
+.bg-card { background: var(--bg-card); }
+.bg-gradient {
+    background: linear-gradient(135deg, var(--bg-secondary) 0%, var(--bg-primary) 100%);
+}
+
+/* Gradientes de texto */
+.text-gradient {
+    background: linear-gradient(135deg, var(--color-primary) 0%, var(--color-secondary) 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+}
+
+.text-gradient-primary {
+    background: linear-gradient(135deg, var(--color-primary) 0%, var(--color-primary-light) 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+}
+
+/* Colores de texto */
+.text-primary { color: var(--text-primary); }
+.text-secondary { color: var(--text-secondary); }
+.text-muted { color: var(--text-muted); }
+.text-success { color: var(--color-success); }
+.text-warning { color: var(--color-warning); }
+.text-error { color: var(--color-error); }
+
+/* Alineación */
+.text-center { text-align: center; }
+.text-left { text-align: left; }
+.text-right { text-align: right; }
+
+/* Display */
+.hidden { display: none !important; }
+.block { display: block; }
+.inline-block { display: inline-block; }
+
+/* Posicionamiento */
+.relative { position: relative; }
+.absolute { position: absolute; }
+.fixed { position: fixed; }
+.sticky { position: sticky; }
+.inset-0 { top: 0; right: 0; bottom: 0; left: 0; }
+
+/* Overflow */
+.overflow-hidden { overflow: hidden; }
+.overflow-auto { overflow: auto; }
+.overflow-x-auto { overflow-x: auto; }
+.overflow-y-auto { overflow-y: auto; }
+
+/* ============================================
+   4. ACCESIBILIDAD
+   ============================================ */
+.sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border-width: 0;
+}
+
+.focus-visible:focus-visible {
+    outline: 2px solid var(--color-primary);
+    outline-offset: 2px;
+}
+
+/* ============================================
+   5. MEDIOS DE IMPRESIÓN
+   ============================================ */
+@media print {
+    .sidebar,
+    .main-header,
+    .btn,
+    .carousel-indicators {
+        display: none !important;
+    }
+    
+    .main-content {
+        margin-left: 0 !important;
+    }
+    
+    body {
+        background: white;
+        color: black;
+    }
+    
+    .lab-card {
+        break-inside: avoid;
+        border: 1px solid #ccc;
+    }
+}

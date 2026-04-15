@@ -1,0 +1,161 @@
+<!-- ============================================ -->
+<!-- PÁGINA: REGISTRO DE USUARIO                  -->
+<!-- ============================================ -->
+
+<div class="page fade-in">
+    <div class="container" style="max-width: 500px;">
+        <div class="page-header" style="text-align: center; margin-bottom: var(--space-xl);">
+            <h1>📝 <span class="highlight">Registrarse</span></h1>
+            <p style="color: var(--color-gray);">Crea una cuenta para acceder a todas las funciones</p>
+        </div>
+
+        <div class="form-container">
+            <form id="registroForm">
+                <div class="form-group">
+                    <label for="regNombre">Nombre completo *</label>
+                    <input type="text" id="regNombre" required placeholder="Ej: Juan Pérez">
+                    <span class="error-message" id="errorNombreReg">El nombre es requerido</span>
+                </div>
+
+                <div class="form-group">
+                    <label for="regEmail">Correo electrónico *</label>
+                    <input type="email" id="regEmail" required placeholder="ejemplo@dominio.com">
+                    <span class="error-message" id="errorEmailReg">Ingresa un email válido</span>
+                </div>
+
+                <div class="form-group">
+                    <label for="regPassword">Contraseña *</label>
+                    <input type="password" id="regPassword" required placeholder="Mínimo 6 caracteres">
+                    <span class="error-message" id="errorPassReg">La contraseña debe tener al menos 6 caracteres</span>
+                </div>
+
+                <div class="form-group">
+                    <label for="regConfirmPassword">Confirmar contraseña *</label>
+                    <input type="password" id="regConfirmPassword" required placeholder="Repite tu contraseña">
+                    <span class="error-message" id="errorConfirmReg">Las contraseñas no coinciden</span>
+                </div>
+
+                <div class="form-actions">
+                    <button type="submit" class="btn btn-primary">✅ Registrarse</button>
+                </div>
+            </form>
+
+            <p style="text-align: center; margin-top: var(--space-lg); color: var(--color-gray);">
+                ¿Ya tienes cuenta? <a href="#login" style="color: var(--color-primary);">Inicia sesión aquí</a>
+            </p>
+
+            <div id="registroSuccess" class="alert alert-success" style="display: none;">
+                ✅ ¡Registro exitoso! Redirigiendo a verificación...
+            </div>
+            <div id="registroError" class="alert alert-error" style="display: none;">
+                ❌ Error en el registro. Verifica tus datos.
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    function generarOTP() {
+        return Math.floor(100000 + Math.random() * 900000).toString();
+    }
+    
+    function inicializarRegistro() {
+        const form = document.getElementById('registroForm');
+        
+        form.addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const nombre = document.getElementById('regNombre').value.trim();
+            const email = document.getElementById('regEmail').value.trim();
+            const password = document.getElementById('regPassword').value;
+            const confirmPassword = document.getElementById('regConfirmPassword').value;
+            
+            let isValid = true;
+            
+            if (!nombre) {
+                document.getElementById('errorNombreReg').style.display = 'block';
+                isValid = false;
+            } else {
+                document.getElementById('errorNombreReg').style.display = 'none';
+            }
+            
+            const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+            if (!email || !emailRegex.test(email)) {
+                document.getElementById('errorEmailReg').style.display = 'block';
+                isValid = false;
+            } else {
+                document.getElementById('errorEmailReg').style.display = 'none';
+            }
+            
+            if (!password || password.length < 6) {
+                document.getElementById('errorPassReg').style.display = 'block';
+                isValid = false;
+            } else {
+                document.getElementById('errorPassReg').style.display = 'none';
+            }
+            
+            if (password !== confirmPassword) {
+                document.getElementById('errorConfirmReg').style.display = 'block';
+                isValid = false;
+            } else {
+                document.getElementById('errorConfirmReg').style.display = 'none';
+            }
+            
+            if (!isValid) return;
+            
+            // Verificar si el usuario ya existe
+            let usuarios = [];
+            const usuariosGuardados = localStorage.getItem('axon_usuarios');
+            if (usuariosGuardados) {
+                usuarios = JSON.parse(usuariosGuardados);
+                if (usuarios.find(u => u.email === email)) {
+                    document.getElementById('registroError').style.display = 'block';
+                    document.getElementById('registroError').innerHTML = '❌ Este correo ya está registrado';
+                    setTimeout(() => {
+                        document.getElementById('registroError').style.display = 'none';
+                    }, 3000);
+                    return;
+                }
+            }
+            
+            // Crear nuevo usuario
+            const otp = generarOTP();
+            const nuevoUsuario = {
+                id: Date.now(),
+                nombre: nombre,
+                email: email,
+                password: password,
+                verificado: false,
+                otp: otp,
+                fechaRegistro: new Date().toISOString()
+            };
+            
+            usuarios.push(nuevoUsuario);
+            localStorage.setItem('axon_usuarios', JSON.stringify(usuarios));
+            
+            // Guardar OTP temporalmente para verificación
+            localStorage.setItem('axon_otp_temp', JSON.stringify({ email: email, otp: otp }));
+            
+            // Mostrar éxito y redirigir
+            document.getElementById('registroSuccess').style.display = 'block';
+            
+            // Mostrar OTP en consola (simulación - en producción se enviaría por email)
+            console.log(`📧 Código OTP para ${email}: ${otp}`);
+            alert(`📧 Simulación: Tu código de verificación es: ${otp}\n(En un entorno real lo recibirías por email)`);
+            
+            setTimeout(() => {
+                if (typeof window.cambiarPagina === 'function') {
+                    window.cambiarPagina('verificacion', { email: email });
+                } else {
+                    window.location.href = `#verificacion?email=${encodeURIComponent(email)}`;
+                }
+            }, 2000);
+        });
+    }
+    
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', inicializarRegistro);
+    } else {
+        inicializarRegistro();
+    }
+</script>

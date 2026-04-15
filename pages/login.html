@@ -1,0 +1,117 @@
+<!-- ============================================ -->
+<!-- PÁGINA: INICIO DE SESIÓN                     -->
+<!-- ============================================ -->
+
+<div class="page fade-in">
+    <div class="container" style="max-width: 500px;">
+        <div class="page-header" style="text-align: center; margin-bottom: var(--space-xl);">
+            <h1>🔑 <span class="highlight">Iniciar Sesión</span></h1>
+            <p style="color: var(--color-gray);">Accede a tu cuenta de AXON</p>
+        </div>
+
+        <div class="form-container">
+            <form id="loginForm">
+                <div class="form-group">
+                    <label for="loginEmail">Correo electrónico *</label>
+                    <input type="email" id="loginEmail" required placeholder="ejemplo@dominio.com">
+                    <span class="error-message" id="errorEmailLogin">Ingresa tu email</span>
+                </div>
+
+                <div class="form-group">
+                    <label for="loginPassword">Contraseña *</label>
+                    <input type="password" id="loginPassword" required placeholder="Tu contraseña">
+                    <span class="error-message" id="errorPassLogin">Ingresa tu contraseña</span>
+                </div>
+
+                <div class="form-actions">
+                    <button type="submit" class="btn btn-primary">🔓 Iniciar Sesión</button>
+                </div>
+            </form>
+
+            <p style="text-align: center; margin-top: var(--space-lg); color: var(--color-gray);">
+                ¿No tienes cuenta? <a href="#registro" style="color: var(--color-primary);">Regístrate aquí</a>
+            </p>
+
+            <div id="loginError" class="alert alert-error" style="display: none;">
+                ❌ Correo o contraseña incorrectos
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    function inicializarLogin() {
+        const form = document.getElementById('loginForm');
+        
+        form.addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const email = document.getElementById('loginEmail').value.trim();
+            const password = document.getElementById('loginPassword').value;
+            
+            if (!email || !password) {
+                document.getElementById('loginError').style.display = 'block';
+                setTimeout(() => {
+                    document.getElementById('loginError').style.display = 'none';
+                }, 3000);
+                return;
+            }
+            
+            // Verificar credenciales
+            const usuariosGuardados = localStorage.getItem('axon_usuarios');
+            if (!usuariosGuardados) {
+                document.getElementById('loginError').style.display = 'block';
+                setTimeout(() => {
+                    document.getElementById('loginError').style.display = 'none';
+                }, 3000);
+                return;
+            }
+            
+            const usuarios = JSON.parse(usuariosGuardados);
+            const usuario = usuarios.find(u => u.email === email && u.password === password);
+            
+            if (!usuario) {
+                document.getElementById('loginError').style.display = 'block';
+                setTimeout(() => {
+                    document.getElementById('loginError').style.display = 'none';
+                }, 3000);
+                return;
+            }
+            
+            if (!usuario.verificado) {
+                document.getElementById('loginError').style.display = 'block';
+                document.getElementById('loginError').innerHTML = '❌ Debes verificar tu cuenta primero. Revisa tu email.';
+                setTimeout(() => {
+                    document.getElementById('loginError').style.display = 'none';
+                    document.getElementById('loginError').innerHTML = '❌ Correo o contraseña incorrectos';
+                }, 3000);
+                return;
+            }
+            
+            // Iniciar sesión
+            localStorage.setItem('axon_usuario_actual', email);
+            localStorage.setItem('axon_sesion_activa', 'true');
+            
+            // Actualizar interfaz
+            if (typeof window.actualizarUIUsuario === 'function') {
+                window.actualizarUIUsuario(usuario.nombre);
+            }
+            
+            // Redirigir al inicio
+            if (typeof window.cambiarPagina === 'function') {
+                window.cambiarPagina('inicio');
+            } else {
+                window.location.href = '#inicio';
+            }
+            
+            // Mostrar mensaje de bienvenida
+            alert(`✅ ¡Bienvenido de vuelta, ${usuario.nombre}!`);
+        });
+    }
+    
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', inicializarLogin);
+    } else {
+        inicializarLogin();
+    }
+</script>
