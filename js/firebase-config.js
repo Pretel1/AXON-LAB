@@ -1,30 +1,25 @@
-/**
- * AXON - FIREBASE CONFIGURATION
- * Configuración del proyecto: axon-labs
- * Proyecto ID: axon-labs-b720e
- */
+// AXON - FIREBASE CONFIGURACIÓN REAL
+// Proyecto: axon-labs-b720e
 
-// Configuración de Firebase (COMPLETAR CON TUS DATOS)
-// Ve a: https://console.firebase.google.com/project/axon-labs-b720e/settings/general
 const firebaseConfig = {
-    apiKey: "TU_API_KEY_AQUI",           // ← COMPLETAR
+    apiKey: "AIzaSyDOGFw9IN4fmE8_JmYvykSGqUK5U1Ts0c8",
     authDomain: "axon-labs-b720e.firebaseapp.com",
     projectId: "axon-labs-b720e",
     storageBucket: "axon-labs-b720e.firebasestorage.app",
-    messagingSenderId: "TU_SENDER_ID",   // ← COMPLETAR
-    appId: "TU_APP_ID",                  // ← COMPLETAR
-    measurementId: "TU_MEASUREMENT_ID"   // ← OPCIONAL
+    messagingSenderId: "257085406188",
+    appId: "1:257085406188:web:e50d7fa62f388512dddec9",
+    measurementId: "G-6BCSZ33P8M"
 };
 
 // Inicializar Firebase
 firebase.initializeApp(firebaseConfig);
 
-// Inicializar servicios
+// Servicios
 const auth = firebase.auth();
 const db = firebase.firestore();
 const storage = firebase.storage();
 
-// Configurar persistencia de autenticación
+// Configurar persistencia
 auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL);
 
 // Exportar servicios globalmente
@@ -33,5 +28,5 @@ window.firebaseAuth = auth;
 window.firebaseDB = db;
 window.firebaseStorage = storage;
 
-console.log('🔥 Firebase inicializado correctamente');
-console.log('📁 Proyecto:', firebaseConfig.projectId);
+console.log('🔥 Firebase conectado a:', firebaseConfig.projectId);
+console.log('✅ Auth Domain:', firebaseConfig.authDomain);
