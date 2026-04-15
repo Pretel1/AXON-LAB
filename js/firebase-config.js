@@ -29,4 +29,3 @@ window.firebaseDB = db;
 window.firebaseStorage = storage;
 
 console.log('🔥 Firebase conectado a:', firebaseConfig.projectId);
-console.log('✅ Auth Domain:', firebaseConfig.authDomain);
