@@ -26,13 +26,21 @@ firebase.initializeApp(firebaseConfig);
 // Inicializar FCM
 const messaging = firebase.messaging();
 
-// Cache de URLs de iconos
-const ICON_CACHE = {
-    default: '/assets/img/logo.png',
-    upload: '/assets/img/upload.png',
-    complete: '/assets/img/complete.png',
-    trophy: '/assets/img/trophy.png'
-};
+// ============================================
+// MANEJADOR DE INSTALACIÓN
+// ============================================
+self.addEventListener('install', (event) => {
+    console.log('✅ Service Worker instalado');
+    self.skipWaiting();
+});
+
+// ============================================
+// MANEJADOR DE ACTIVACIÓN
+// ============================================
+self.addEventListener('activate', (event) => {
+    console.log('✅ Service Worker activado');
+    event.waitUntil(clients.claim());
+});
 
 // ============================================
 // MANEJADOR DE MENSAJES EN SEGUNDO PLANO
@@ -40,38 +48,19 @@ const ICON_CACHE = {
 messaging.onBackgroundMessage((payload) => {
     console.log('📨 Mensaje recibido en background:', payload);
     
-    const notification = payload.notification;
-    const data = payload.data || {};
-    
-    let icon = ICON_CACHE.default;
-    if (data.tipo === 'nuevo_laboratorio') icon = ICON_CACHE.upload;
-    if (data.tipo === 'progreso_actualizado') icon = ICON_CACHE.complete;
-    if (data.tipo === 'logro_desbloqueado') icon = ICON_CACHE.trophy;
-    
+    const notificationTitle = payload.notification?.title || 'AXON - Laboratorios Académicos';
     const notificationOptions = {
-        body: notification?.body || 'Tienes una nueva actualización en AXON',
-        icon: notification?.icon || icon,
+        body: payload.notification?.body || 'Tienes una nueva actualización',
+        icon: '/assets/img/logo.png',
         badge: '/assets/img/badge.png',
         vibrate: [200, 100, 200],
-        silent: false,
-        requireInteraction: data.requiereInteraccion === 'true',
         data: {
-            url: data.url || '/',
-            tipo: data.tipo,
-            id: data.id,
-            timestamp: Date.now(),
-            click_action: notification?.click_action || data.url
-        },
-        actions: [
-            { action: 'ver', title: '🔍 Ver ahora' },
-            { action: 'cerrar', title: '❌ Cerrar' }
-        ]
+            url: payload.data?.url || '/',
+            click_action: payload.notification?.click_action
+        }
     };
     
-    return self.registration.showNotification(
-        notification?.title || 'AXON - Laboratorios Académicos',
-        notificationOptions
-    );
+    return self.registration.showNotification(notificationTitle, notificationOptions);
 });
 
 // ============================================
@@ -80,28 +69,15 @@ messaging.onBackgroundMessage((payload) => {
 self.addEventListener('notificationclick', (event) => {
     console.log('🔔 Notificación clickeada:', event);
     
-    const notification = event.notification;
-    const action = event.action;
+    event.notification.close();
     
-    notification.close();
-    
-    if (action === 'cerrar') return;
-    
-    let urlToOpen = notification.data?.url || '/';
-    
-    if (action === 'ver' && notification.data?.url) {
-        urlToOpen = notification.data.url;
-    }
-    
-    if (notification.data?.tipo === 'nuevo_laboratorio' && notification.data?.id) {
-        urlToOpen = `/#detalle?id=${notification.data.id}`;
-    }
+    const urlToOpen = event.notification.data?.url || '/';
     
     event.waitUntil(
         clients.matchAll({ type: 'window', includeUncontrolled: true })
             .then((windowClients) => {
                 for (let client of windowClients) {
-                    if (client.url.includes(urlToOpen) && 'focus' in client) {
+                    if (client.url === urlToOpen && 'focus' in client) {
                         return client.focus();
                     }
                 }
@@ -112,42 +88,4 @@ self.addEventListener('notificationclick', (event) => {
     );
 });
 
-// ============================================
-// MANEJADOR DE INSTALACIÓN
-// ============================================
-self.addEventListener('install', (event) => {
-    console.log('Service Worker instalado');
-    event.waitUntil(
-        caches.open('axon-v1').then((cache) => {
-            return cache.addAll([
-                '/',
-                '/index.html',
-                '/css/estilo.css',
-                '/css/layout.css',
-                '/js/app.js'
-            ]);
-        })
-    );
-    self.skipWaiting();
-});
-
-// ============================================
-// MANEJADOR DE ACTIVACIÓN
-// ============================================
-self.addEventListener('activate', (event) => {
-    console.log('Service Worker activado');
-    event.waitUntil(
-        caches.keys().then((cacheNames) => {
-            return Promise.all(
-                cacheNames.map((cacheName) => {
-                    if (cacheName !== 'axon-v1') {
-                        return caches.delete(cacheName);
-                    }
-                })
-            );
-        })
-    );
-    event.waitUntil(clients.claim());
-});
-
-console.log('🔥 Firebase Messaging Service Worker cargado');
+console.log('🔥 Firebase Messaging Service Worker cargado correctamente');
