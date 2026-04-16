@@ -10,16 +10,14 @@
 importScripts('https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js');
 importScripts('https://www.gstatic.com/firebasejs/9.22.2/firebase-messaging-compat.js');
 
-// Configuración de Firebase (COMPLETAR CON TUS DATOS)
-// Ve a: https://console.firebase.google.com/project/axon-labs-b720e/settings/general
+// Configuración de Firebase (CON TUS DATOS REALES)
 const firebaseConfig = {
-    apiKey: "TU_API_KEY_AQUI",           // ← COMPLETAR
+    apiKey: "AIzaSyDOGFw9IN4fmE8_JmYvykSGqUK5U1Ts0c8",
     authDomain: "axon-labs-b720e.firebaseapp.com",
     projectId: "axon-labs-b720e",
     storageBucket: "axon-labs-b720e.firebasestorage.app",
     messagingSenderId: "257085406188",
-    appId: "TU_APP_ID_AQUI",              // ← COMPLETAR
-    measurementId: "TU_MEASUREMENT_ID"    // ← OPCIONAL
+    appId: "1:257085406188:web:e50d7fa62f388512dddec9"
 };
 
 // Inicializar Firebase
@@ -45,13 +43,11 @@ messaging.onBackgroundMessage((payload) => {
     const notification = payload.notification;
     const data = payload.data || {};
     
-    // Determinar icono según tipo
     let icon = ICON_CACHE.default;
     if (data.tipo === 'nuevo_laboratorio') icon = ICON_CACHE.upload;
     if (data.tipo === 'progreso_actualizado') icon = ICON_CACHE.complete;
     if (data.tipo === 'logro_desbloqueado') icon = ICON_CACHE.trophy;
     
-    // Construir opciones de notificación
     const notificationOptions = {
         body: notification?.body || 'Tienes una nueva actualización en AXON',
         icon: notification?.icon || icon,
@@ -72,7 +68,6 @@ messaging.onBackgroundMessage((payload) => {
         ]
     };
     
-    // Mostrar notificación
     return self.registration.showNotification(
         notification?.title || 'AXON - Laboratorios Académicos',
         notificationOptions
@@ -88,23 +83,16 @@ self.addEventListener('notificationclick', (event) => {
     const notification = event.notification;
     const action = event.action;
     
-    // Cerrar la notificación
     notification.close();
     
-    // Manejar acciones
-    if (action === 'cerrar') {
-        return;
-    }
+    if (action === 'cerrar') return;
     
-    // Obtener URL de destino
     let urlToOpen = notification.data?.url || '/';
     
-    // Si hay acción "ver", usar la URL de la notificación
     if (action === 'ver' && notification.data?.url) {
         urlToOpen = notification.data.url;
     }
     
-    // Si es un tipo específico, construir URL
     if (notification.data?.tipo === 'nuevo_laboratorio' && notification.data?.id) {
         urlToOpen = `/#detalle?id=${notification.data.id}`;
     }
@@ -112,13 +100,11 @@ self.addEventListener('notificationclick', (event) => {
     event.waitUntil(
         clients.matchAll({ type: 'window', includeUncontrolled: true })
             .then((windowClients) => {
-                // Verificar si ya hay una ventana abierta
                 for (let client of windowClients) {
                     if (client.url.includes(urlToOpen) && 'focus' in client) {
                         return client.focus();
                     }
                 }
-                // Si no, abrir nueva ventana
                 if (clients.openWindow) {
                     return clients.openWindow(urlToOpen);
                 }
@@ -127,12 +113,10 @@ self.addEventListener('notificationclick', (event) => {
 });
 
 // ============================================
-// MANEJADOR DE INSTALACIÓN DEL SERVICE WORKER
+// MANEJADOR DE INSTALACIÓN
 // ============================================
 self.addEventListener('install', (event) => {
     console.log('Service Worker instalado');
-    
-    // Cachear recursos estáticos
     event.waitUntil(
         caches.open('axon-v1').then((cache) => {
             return cache.addAll([
@@ -140,13 +124,10 @@ self.addEventListener('install', (event) => {
                 '/index.html',
                 '/css/estilo.css',
                 '/css/layout.css',
-                '/js/app.js',
-                '/assets/img/logo.png',
-                '/assets/img/badge.png'
+                '/js/app.js'
             ]);
         })
     );
-    
     self.skipWaiting();
 });
 
@@ -155,8 +136,6 @@ self.addEventListener('install', (event) => {
 // ============================================
 self.addEventListener('activate', (event) => {
     console.log('Service Worker activado');
-    
-    // Limpiar caches antiguos
     event.waitUntil(
         caches.keys().then((cacheNames) => {
             return Promise.all(
@@ -168,39 +147,7 @@ self.addEventListener('activate', (event) => {
             );
         })
     );
-    
     event.waitUntil(clients.claim());
-});
-
-// ============================================
-// MANEJADOR DE FETCH (para caché)
-// ============================================
-self.addEventListener('fetch', (event) => {
-    // Solo cachear recursos estáticos
-    if (event.request.method !== 'GET') return;
-    
-    const url = new URL(event.request.url);
-    
-    // No cachear llamadas a API
-    if (url.pathname.includes('/api/')) return;
-    
-    event.respondWith(
-        caches.match(event.request).then((response) => {
-            if (response) {
-                return response;
-            }
-            return fetch(event.request).then((response) => {
-                // Cachear solo respuestas exitosas
-                if (response.status === 200) {
-                    const responseClone = response.clone();
-                    caches.open('axon-v1').then((cache) => {
-                        cache.put(event.request, responseClone);
-                    });
-                }
-                return response;
-            });
-        })
-    );
 });
 
 console.log('🔥 Firebase Messaging Service Worker cargado');
