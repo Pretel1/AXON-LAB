@@ -1,6 +1,9 @@
-// AXON - FIREBASE CONFIGURACIÓN REAL
-// Proyecto: axon-labs-b720e
+/**
+ * AXON - FIREBASE CONFIGURACIÓN
+ * Archivo principal de conexión a Firebase
+ */
 
+// Configuración de Firebase (REEMPLAZAR CON TUS DATOS REALES)
 const firebaseConfig = {
     apiKey: "AIzaSyDOGFw9IN4fmE8_JmYvykSGqUK5U1Ts0c8",
     authDomain: "axon-labs-b720e.firebaseapp.com",
@@ -14,18 +17,27 @@ const firebaseConfig = {
 // Inicializar Firebase
 firebase.initializeApp(firebaseConfig);
 
-// Servicios
+// Servicios globales
 const auth = firebase.auth();
 const db = firebase.firestore();
 const storage = firebase.storage();
 
-// Configurar persistencia
+// Configurar persistencia de sesión
 auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL);
 
+// Habilitar modo offline para Firestore (opcional)
+db.enablePersistence()
+    .catch((err) => {
+        if (err.code == 'failed-precondition') {
+            console.warn('Persistencia offline no disponible: múltiples pestañas abiertas');
+        } else if (err.code == 'unimplemented') {
+            console.warn('Persistencia offline no soportada por el navegador');
+        }
+    });
+
 // Exportar servicios globalmente
-window.firebaseApp = firebase;
 window.firebaseAuth = auth;
 window.firebaseDB = db;
 window.firebaseStorage = storage;
 
-console.log('🔥 Firebase conectado a:', firebaseConfig.projectId);
+console.log('🔥 Firebase inicializado correctamente');
