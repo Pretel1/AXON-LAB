@@ -1,237 +1,419 @@
 <!-- ============================================ -->
-<!-- PÁGINA: DETALLE DEL LABORATORIO              -->
+<!-- PÁGINA: DETALLE DEL LABORATORIO (CORREGIDO)  -->
+<!-- Usa Firestore, descarga real, progreso real  -->
 <!-- ============================================ -->
 
 <div class="page fade-in" id="detallePage">
-    <div class="container" style="max-width: 900px;">
+    <div class="container" style="max-width: 1000px;">
         <div style="margin-bottom: var(--space-md);">
-            <button id="backBtn" class="btn btn-outline" style="padding: 0.5rem 1rem;">← Volver a laboratorios</button>
+            <button id="backBtn" class="btn btn-outline">
+                ← Volver a laboratorios
+            </button>
         </div>
         
         <div id="detalleContent">
-            <!-- Contenido del detalle se carga dinámicamente -->
             <div style="text-align: center; padding: var(--space-3xl);">
-                <div class="loader">Cargando...</div>
+                <div class="loader-spinner" style="margin: 0 auto;"></div>
+                <p style="margin-top: var(--space-md); color: var(--text-muted);">Cargando laboratorio...</p>
             </div>
         </div>
     </div>
 </div>
 
 <script>
-    // Obtener ID del laboratorio de la URL
+(function() {
+    'use strict';
+    
+    // ============================================
+    // OBTENER ID DE LABORATORIO (STRING - FIRESTORE)
+    // ============================================
     function obtenerIdLaboratorio() {
         const hash = window.location.hash;
         const match = hash.match(/[?&]id=([^&]+)/);
-        if (match) return parseInt(match[1]);
+        if (match) {
+            return decodeURIComponent(match[1]);
+        }
         
-        // También buscar en la URL completa
         const urlParams = new URLSearchParams(window.location.search);
-        const idParam = urlParams.get('id');
-        if (idParam) return parseInt(idParam);
-        
-        return null;
+        return urlParams.get('id');
     }
     
-    // Cargar detalle del laboratorio
-    function cargarDetalleLaboratorio() {
+    // ============================================
+    // OBTENER NOMBRE DE CATEGORÍA
+    // ============================================
+    function getNombreCategoria(categoria) {
+        const nombres = {
+            'redes': '🌐 Redes',
+            'programacion': '💻 Programación',
+            'bases-datos': '🗄️ Bases de Datos',
+            'inteligencia': '🧠 Inteligencia Artificial',
+            'seguridad': '🔒 Seguridad'
+        };
+        return nombres[categoria] || categoria;
+    }
+    
+    // ============================================
+    // FORMATO DE FECHA
+    // ============================================
+    function formatearFecha(fecha) {
+        if (!fecha) return 'Reciente';
+        try {
+            return new Date(fecha).toLocaleDateString('es-PE', {
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric'
+            });
+        } catch (e) {
+            return fecha;
+        }
+    }
+    
+    // ============================================
+    // MOSTRAR NOTIFICACIÓN
+    // ============================================
+    function mostrarMensaje(mensaje, tipo) {
+        const el = document.getElementById('mensajeDetalle');
+        if (!el) return;
+        el.textContent = mensaje;
+        el.className = `alert alert-${tipo}`;
+        el.style.display = 'block';
+        setTimeout(() => {
+            el.style.display = 'none';
+        }, 3000);
+    }
+    
+    // ============================================
+    // CARGAR DETALLE DEL LABORATORIO
+    // ============================================
+    async function cargarDetalle() {
         const id = obtenerIdLaboratorio();
         const container = document.getElementById('detalleContent');
         
+        // Validar ID
         if (!id) {
             container.innerHTML = `
                 <div style="text-align: center; padding: var(--space-3xl);">
                     <span style="font-size: 4rem;">❌</span>
-                    <h2>Laboratorio no encontrado</h2>
-                    <p style="color: var(--color-gray);">No se especificó un ID de laboratorio válido.</p>
-                    <button id="irLaboratoriosBtn" class="btn btn-primary" style="margin-top: var(--space-lg);">📚 Ir a laboratorios</button>
+                    <h2 style="margin-top: var(--space-4);">Laboratorio no encontrado</h2>
+                    <p style="color: var(--text-muted); margin-top: var(--space-4);">
+                        No se especificó un ID de laboratorio válido.
+                    </p>
+                    <button onclick="window.cambiarPagina('laboratorios')" class="btn btn-primary" style="margin-top: var(--space-lg);">
+                        📚 Ver todos los laboratorios
+                    </button>
                 </div>
             `;
-            const btn = document.getElementById('irLaboratoriosBtn');
-            if (btn) btn.addEventListener('click', () => {
-                if (typeof window.cambiarPagina === 'function') {
-                    window.cambiarPagina('laboratorios');
-                } else {
-                    window.location.href = '#laboratorios';
-                }
-            });
             return;
         }
         
-        // Obtener laboratorio de localStorage o datos simulados
-        let laboratorio = null;
-        const guardados = localStorage.getItem('axon_laboratorios');
-        let laboratorios = [];
-        
-        if (guardados) {
-            laboratorios = JSON.parse(guardados);
-        } else {
-            laboratorios = [
-                { id: 1, nombre: "Introducción a Redes TCP/IP", autor: "Dr. Carlos Martínez", categoria: "redes", descripcion: "Laboratorio completo sobre fundamentos de redes.", archivo: "lab-redes-tcpip.pdf", fecha: "2024-01-15", descargas: 245, vistas: 1250, icono: "🌐", modulos: ["Conceptos básicos", "Modelo OSI", "Direccionamiento IP", "Protocolos TCP/UDP"] },
-                { id: 2, nombre: "Programación en Python", autor: "Ing. Ana Rodríguez", categoria: "programacion", descripcion: "Laboratorio práctico de Python.", archivo: "lab-python.zip", fecha: "2024-01-20", descargas: 189, vistas: 890, icono: "🐍", modulos: ["Variables y tipos", "Estructuras de control", "Funciones", "Manejo de archivos"] }
-            ];
-        }
-        
-        laboratorio = laboratorios.find(lab => lab.id === id);
-        
-        if (!laboratorio) {
-            container.innerHTML = `
-                <div style="text-align: center; padding: var(--space-3xl);">
-                    <span style="font-size: 4rem;">❌</span>
-                    <h2>Laboratorio no encontrado</h2>
-                    <p style="color: var(--color-gray);">El laboratorio con ID ${id} no existe.</p>
-                    <button id="irLaboratoriosBtn" class="btn btn-primary" style="margin-top: var(--space-lg);">📚 Ir a laboratorios</button>
-                </div>
-            `;
-            const btn = document.getElementById('irLaboratoriosBtn');
-            if (btn) btn.addEventListener('click', () => {
-                if (typeof window.cambiarPagina === 'function') {
-                    window.cambiarPagina('laboratorios');
-                } else {
-                    window.location.href = '#laboratorios';
-                }
-            });
-            return;
-        }
-        
-        // Renderizar detalle
-        const getNombreCategoria = (cat) => {
-            const nombres = { redes: 'Redes', programacion: 'Programación', 'bases-datos': 'Bases de Datos', inteligencia: 'Inteligencia Artificial', seguridad: 'Seguridad' };
-            return nombres[cat] || cat;
-        };
-        
-        // Cargar progreso guardado
-        const usuarioActual = localStorage.getItem('axon_usuario_actual');
-        const progresoKey = `axon_progreso_${usuarioActual}_${id}`;
-        const progresoGuardado = JSON.parse(localStorage.getItem(progresoKey) || '{}');
-        const modulosCompletados = progresoGuardado.modulos || [];
-        
-        container.innerHTML = `
-            <div class="lab-detalle" style="background: var(--color-card); border-radius: var(--radius-xl); padding: var(--space-xl); border: 1px solid var(--color-border);">
-                <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; margin-bottom: var(--space-lg);">
-                    <span class="lab-card-category" style="font-size: 1rem;">${laboratorio.icono || '📚'} ${getNombreCategoria(laboratorio.categoria)}</span>
-                    <div class="lab-stats" style="display: flex; gap: var(--space-md); color: var(--color-gray);">
-                        <span>📥 ${laboratorio.descargas || 0} descargas</span>
-                        <span>👁️ ${laboratorio.vistas || 0} vistas</span>
-                        <span>📅 ${laboratorio.fecha}</span>
+        try {
+            // Obtener laboratorio desde Firestore
+            const lab = await window.obtenerLaboratorioPorId(id);
+            
+            if (!lab) {
+                container.innerHTML = `
+                    <div style="text-align: center; padding: var(--space-3xl);">
+                        <span style="font-size: 4rem;">❌</span>
+                        <h2 style="margin-top: var(--space-4);">Laboratorio no encontrado</h2>
+                        <p style="color: var(--text-muted); margin-top: var(--space-4);">
+                            El laboratorio que buscas no existe o ha sido eliminado.
+                        </p>
+                        <button onclick="window.cambiarPagina('laboratorios')" class="btn btn-primary" style="margin-top: var(--space-lg);">
+                            📚 Ver todos los laboratorios
+                        </button>
                     </div>
-                </div>
-                
-                <h1 style="font-size: var(--text-3xl); margin-bottom: var(--space-md);">${laboratorio.nombre}</h1>
-                
-                <div style="display: flex; align-items: center; gap: var(--space-md); margin-bottom: var(--space-lg); padding-bottom: var(--space-md); border-bottom: 1px solid var(--color-border);">
-                    <div style="width: 50px; height: 50px; background: linear-gradient(135deg, var(--color-primary), var(--color-secondary)); border-radius: var(--radius-full); display: flex; align-items: center; justify-content: center; font-size: 1.5rem;">👨‍🏫</div>
-                    <div>
-                        <div style="font-weight: 600;">${laboratorio.autor}</div>
-                        <div style="color: var(--color-gray); font-size: var(--text-sm);">Autor(es)</div>
-                    </div>
-                </div>
-                
-                <div style="margin-bottom: var(--space-xl);">
-                    <h3 style="margin-bottom: var(--space-sm);">📝 Descripción</h3>
-                    <p style="color: var(--color-gray); line-height: 1.6;">${laboratorio.descripcion || 'No hay descripción disponible para este laboratorio.'}</p>
-                </div>
-                
-                <div style="margin-bottom: var(--space-xl);">
-                    <h3 style="margin-bottom: var(--space-sm);">📚 Módulos del Laboratorio</h3>
-                    <div class="modulos-lista" style="display: flex; flex-direction: column; gap: var(--space-sm);">
-                        ${(laboratorio.modulos || ['Módulo 1', 'Módulo 2', 'Módulo 3']).map((modulo, index) => `
-                            <div class="modulo-item" style="display: flex; align-items: center; gap: var(--space-md); padding: var(--space-sm); background: rgba(255,255,255,0.03); border-radius: var(--radius-md);">
-                                <input type="checkbox" id="modulo_${index}" data-modulo="${modulo}" ${modulosCompletados.includes(modulo) ? 'checked' : ''} style="width: 20px; height: 20px; cursor: pointer; accent-color: var(--color-primary);">
-                                <label for="modulo_${index}" style="cursor: pointer; flex: 1;">${modulo}</label>
-                            </div>
-                        `).join('')}
-                    </div>
-                </div>
-                
-                <div style="margin-bottom: var(--space-xl);">
-                    <h3 style="margin-bottom: var(--space-sm);">📊 Progreso</h3>
-                    <div class="progress-bar" style="background: rgba(255,255,255,0.1); border-radius: var(--radius-full); height: 20px; overflow: hidden;">
-                        <div class="progress-fill" style="width: ${(modulosCompletados.length / (laboratorio.modulos?.length || 3)) * 100}%; height: 100%; background: linear-gradient(90deg, var(--color-primary), var(--color-secondary)); transition: width 0.3s ease;"></div>
-                    </div>
-                    <p style="margin-top: var(--space-sm); color: var(--color-gray); text-align: center;">${modulosCompletados.length} / ${laboratorio.modulos?.length || 3} módulos completados</p>
-                </div>
-                
-                <div style="display: flex; gap: var(--space-md); flex-wrap: wrap; justify-content: center;">
-                    <button id="descargarBtn" class="btn btn-primary">📥 Descargar Laboratorio</button>
-                    <button id="guardarProgresoBtn" class="btn btn-secondary">💾 Guardar Progreso</button>
-                </div>
-            </div>
-        `;
-        
-        // Event listeners
-        document.getElementById('descargarBtn')?.addEventListener('click', () => {
-            alert(`📥 Descargando: ${laboratorio.archivo}\n(Simulación - En un entorno real se descargaría el archivo)`);
-            // Incrementar contador de descargas
-            laboratorio.descargas = (laboratorio.descargas || 0) + 1;
-            const index = laboratorios.findIndex(l => l.id === id);
-            if (index !== -1) {
-                laboratorios[index] = laboratorio;
-                localStorage.setItem('axon_laboratorios', JSON.stringify(laboratorios));
-            }
-        });
-        
-        document.getElementById('guardarProgresoBtn')?.addEventListener('click', () => {
-            const usuarioActual = localStorage.getItem('axon_usuario_actual');
-            if (!usuarioActual) {
-                alert('⚠️ Debes iniciar sesión para guardar tu progreso');
+                `;
                 return;
             }
             
-            const checkboxes = document.querySelectorAll('.modulo-item input[type="checkbox"]');
-            const modulosCompletadosNuevos = Array.from(checkboxes)
-                .filter(cb => cb.checked)
-                .map(cb => cb.getAttribute('data-modulo'));
+            // Cargar progreso del usuario (si está logueado)
+            let modulosCompletados = [];
+            let porcentajeGuardado = 0;
+            const user = firebaseAuth.currentUser;
             
-            const progresoKey = `axon_progreso_${usuarioActual}_${id}`;
-            localStorage.setItem(progresoKey, JSON.stringify({ modulos: modulosCompletadosNuevos, fecha: new Date().toISOString() }));
-            
-            // Actualizar barra de progreso
-            const porcentaje = (modulosCompletadosNuevos.length / (laboratorio.modulos?.length || 3)) * 100;
-            document.querySelector('.progress-fill').style.width = `${porcentaje}%`;
-            document.querySelector('.progress-bar + p').innerHTML = `${modulosCompletadosNuevos.length} / ${laboratorio.modulos?.length || 3} módulos completados`;
-            
-            alert('✅ Progreso guardado exitosamente');
-        });
-        
-        // Marcar/desmarcar todos
-        document.querySelectorAll('.modulo-item input').forEach(checkbox => {
-            checkbox.addEventListener('change', () => {
-                const checkboxes = document.querySelectorAll('.modulo-item input');
-                const completados = Array.from(checkboxes).filter(cb => cb.checked).length;
-                const porcentaje = (completados / (laboratorio.modulos?.length || 3)) * 100;
-                document.querySelector('.progress-fill').style.width = `${porcentaje}%`;
-                document.querySelector('.progress-bar + p').innerHTML = `${completados} / ${laboratorio.modulos?.length || 3} módulos completados`;
-            });
-        });
-    }
-    
-    // Inicializar página
-    function inicializarDetalle() {
-        cargarDetalleLaboratorio();
-        
-        const backBtn = document.getElementById('backBtn');
-        if (backBtn) {
-            backBtn.addEventListener('click', () => {
-                if (typeof window.cambiarPagina === 'function') {
-                    window.cambiarPagina('laboratorios');
-                } else {
-                    window.location.href = '#laboratorios';
+            if (user) {
+                try {
+                    const progreso = await window.obtenerProgreso(id, user.uid);
+                    modulosCompletados = progreso.modulos || [];
+                    porcentajeGuardado = progreso.porcentaje || 0;
+                } catch (e) {
+                    console.warn('No se pudo cargar progreso:', e);
                 }
-            });
+            }
+            
+            const totalModulos = (lab.modulos || []).length;
+            const mostrarModulos = totalModulos > 0;
+            const porcentaje = mostrarModulos ? porcentajeGuardado : 100;
+            
+            // Renderizar HTML
+            container.innerHTML = `
+                <div id="mensajeDetalle" style="display: none; margin-bottom: var(--space-md); padding: var(--space-md); border-radius: var(--radius-md);"></div>
+                
+                <div style="background: var(--bg-card); border-radius: var(--radius-xl); padding: var(--space-xl); border: 1px solid var(--border-color);">
+                    
+                    <!-- Cabecera: Categoría y estadísticas -->
+                    <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; margin-bottom: var(--space-lg);">
+                        <span class="lab-card-category" style="font-size: 1rem; padding: 0.5rem 1rem;">
+                            ${lab.icono || '📚'} ${getNombreCategoria(lab.categoria)}
+                        </span>
+                        <div style="display: flex; gap: var(--space-md); color: var(--text-muted); font-size: var(--text-sm);">
+                            <span>📥 ${lab.descargas || 0} descargas</span>
+                            <span>👁️ ${lab.vistas || 0} vistas</span>
+                            <span>📅 ${formatearFecha(lab.fecha)}</span>
+                        </div>
+                    </div>
+                    
+                    <!-- Título -->
+                    <h1 style="font-size: var(--text-3xl); margin-bottom: var(--space-md); color: var(--text-primary);">
+                        ${escapeHtml(lab.nombre)}
+                    </h1>
+                    
+                    <!-- Autor -->
+                    <div style="display: flex; align-items: center; gap: var(--space-md); margin-bottom: var(--space-lg); padding-bottom: var(--space-md); border-bottom: 1px solid var(--border-color);">
+                        <div style="width: 50px; height: 50px; background: linear-gradient(135deg, var(--color-primary), var(--color-secondary)); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 1.5rem;">
+                            👨‍🏫
+                        </div>
+                        <div>
+                            <div style="font-weight: 600; color: var(--text-primary);">${escapeHtml(lab.autor)}</div>
+                            <div style="color: var(--text-muted); font-size: var(--text-sm);">Autor(es)</div>
+                        </div>
+                    </div>
+                    
+                    <!-- Imagen de portada (si existe) -->
+                    ${lab.imagenURL ? `
+                    <div style="margin-bottom: var(--space-xl);">
+                        <img src="${lab.imagenURL}" alt="Portada de ${escapeHtml(lab.nombre)}" style="width: 100%; max-height: 400px; object-fit: cover; border-radius: var(--radius-lg);">
+                    </div>
+                    ` : ''}
+                    
+                    <!-- Descripción -->
+                    <div style="margin-bottom: var(--space-xl);">
+                        <h3 style="margin-bottom: var(--space-sm); color: var(--text-primary);">📝 Descripción</h3>
+                        <p style="color: var(--text-muted); line-height: 1.6;">
+                            ${escapeHtml(lab.descripcion || 'Sin descripción disponible.')}
+                        </p>
+                    </div>
+                    
+                    ${mostrarModulos ? `
+                    <!-- Módulos y Progreso -->
+                    <div style="margin-bottom: var(--space-xl);">
+                        <h3 style="margin-bottom: var(--space-sm); color: var(--text-primary);">📚 Módulos del Laboratorio</h3>
+                        <div id="modulosLista" style="display: flex; flex-direction: column; gap: var(--space-sm);">
+                            ${lab.modulos.map((modulo, index) => `
+                                <div class="modulo-item" style="display: flex; align-items: center; gap: var(--space-md); padding: var(--space-sm) var(--space-md); background: rgba(255,255,255,0.03); border-radius: var(--radius-md); transition: background 0.2s;">
+                                    <input type="checkbox" 
+                                           id="mod_${index}" 
+                                           data-modulo="${escapeHtml(modulo)}" 
+                                           ${modulosCompletados.includes(modulo) ? 'checked' : ''}
+                                           style="width: 20px; height: 20px; cursor: pointer; accent-color: var(--color-primary);">
+                                    <label for="mod_${index}" style="cursor: pointer; flex: 1; color: var(--text-secondary);">
+                                        ${escapeHtml(modulo)}
+                                    </label>
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+                    
+                    <!-- Barra de progreso -->
+                    <div style="margin-bottom: var(--space-xl);">
+                        <h3 style="margin-bottom: var(--space-sm); color: var(--text-primary);">📊 Tu Progreso</h3>
+                        <div style="background: rgba(255,255,255,0.1); border-radius: var(--radius-full); height: 24px; overflow: hidden;">
+                            <div id="progressFill" style="width: ${porcentaje}%; height: 100%; background: linear-gradient(90deg, var(--color-primary), var(--color-secondary)); transition: width 0.3s ease; display: flex; align-items: center; justify-content: center; color: white; font-size: var(--text-xs); font-weight: bold;">
+                                ${porcentaje}%
+                            </div>
+                        </div>
+                        <p id="progressText" style="margin-top: var(--space-sm); color: var(--text-muted); text-align: center; font-size: var(--text-sm);">
+                            ${modulosCompletados.length} de ${totalModulos} módulos completados
+                        </p>
+                    </div>
+                    ` : ''}
+                    
+                    <!-- Botones de acción -->
+                    <div style="display: flex; gap: var(--space-md); flex-wrap: wrap; justify-content: center;">
+                        ${lab.archivoURL ? `
+                        <button id="descargarBtn" class="btn btn-primary" style="display: inline-flex; align-items: center; gap: var(--space-2);">
+                            📥 Descargar Laboratorio
+                        </button>
+                        ` : '<p style="color: var(--text-muted);">⚠️ No hay archivo adjunto disponible</p>'}
+                        
+                        ${mostrarModulos && user ? `
+                        <button id="guardarProgresoBtn" class="btn btn-secondary" style="display: inline-flex; align-items: center; gap: var(--space-2);">
+                            💾 Guardar Progreso
+                        </button>
+                        ` : ''}
+                        
+                        ${mostrarModulos && !user ? `
+                        <p style="color: var(--text-muted); font-size: var(--text-sm);">
+                            🔐 <a href="#login" style="color: var(--color-primary);">Inicia sesión</a> para guardar tu progreso
+                        </p>
+                        ` : ''}
+                    </div>
+                </div>
+            `;
+            
+            // ============================================
+            // EVENTO: DESCARGA REAL
+            // ============================================
+            const descargarBtn = document.getElementById('descargarBtn');
+            if (descargarBtn && lab.archivoURL) {
+                descargarBtn.addEventListener('click', async () => {
+                    descargarBtn.disabled = true;
+                    descargarBtn.innerHTML = '⏳ Preparando descarga...';
+                    
+                    try {
+                        // Crear enlace de descarga real
+                        const link = document.createElement('a');
+                        link.href = lab.archivoURL;
+                        link.download = lab.archivoNombre || 'laboratorio';
+                        link.target = '_blank';
+                        document.body.appendChild(link);
+                        link.click();
+                        document.body.removeChild(link);
+                        
+                        // Incrementar contador de descargas
+                        await window.incrementarDescargas(id);
+                        mostrarMensaje('✅ Descarga iniciada correctamente', 'success');
+                        
+                    } catch (error) {
+                        console.error('Error en descarga:', error);
+                        mostrarMensaje('❌ Error al descargar el archivo', 'error');
+                    } finally {
+                        descargarBtn.disabled = false;
+                        descargarBtn.innerHTML = '📥 Descargar Laboratorio';
+                    }
+                });
+            }
+            
+            // ============================================
+            // EVENTO: GUARDAR PROGRESO
+            // ============================================
+            const guardarBtn = document.getElementById('guardarProgresoBtn');
+            if (guardarBtn) {
+                guardarBtn.addEventListener('click', async () => {
+                    const userActual = firebaseAuth.currentUser;
+                    if (!userActual) {
+                        mostrarMensaje('⚠️ Debes iniciar sesión para guardar tu progreso', 'warning');
+                        return;
+                    }
+                    
+                    guardarBtn.disabled = true;
+                    guardarBtn.innerHTML = '⏳ Guardando...';
+                    
+                    try {
+                        const checkboxes = document.querySelectorAll('#modulosLista input[type="checkbox"]');
+                        const completados = Array.from(checkboxes)
+                            .filter(cb => cb.checked)
+                            .map(cb => cb.getAttribute('data-modulo'));
+                        
+                        const result = await window.guardarProgreso(id, completados);
+                        
+                        if (result.success) {
+                            const pct = result.porcentaje;
+                            const progressFill = document.getElementById('progressFill');
+                            const progressText = document.getElementById('progressText');
+                            const total = completados.length;
+                            const totalModulosCount = lab.modulos?.length || 1;
+                            
+                            if (progressFill) {
+                                progressFill.style.width = pct + '%';
+                                progressFill.textContent = pct + '%';
+                            }
+                            if (progressText) {
+                                progressText.textContent = `${total} de ${totalModulosCount} módulos completados`;
+                            }
+                            
+                            mostrarMensaje(`✅ Progreso guardado: ${pct}% completado`, 'success');
+                        } else {
+                            mostrarMensaje('❌ ' + result.message, 'error');
+                        }
+                    } catch (error) {
+                        console.error('Error guardando progreso:', error);
+                        mostrarMensaje('❌ Error al guardar el progreso', 'error');
+                    } finally {
+                        guardarBtn.disabled = false;
+                        guardarBtn.innerHTML = '💾 Guardar Progreso';
+                    }
+                });
+            }
+            
+            // ============================================
+            // ACTUALIZAR BARRA DE PROGRESO AL MARCAR CHECKBOX
+            // ============================================
+            if (mostrarModulos) {
+                const checkboxes = document.querySelectorAll('#modulosLista input[type="checkbox"]');
+                const progressFill = document.getElementById('progressFill');
+                const progressText = document.getElementById('progressText');
+                const totalModulosCount = lab.modulos?.length || 1;
+                
+                const actualizarBarraProgreso = () => {
+                    const checks = document.querySelectorAll('#modulosLista input[type="checkbox"]');
+                    const completados = Array.from(checks).filter(cb => cb.checked).length;
+                    const pct = Math.round((completados / totalModulosCount) * 100);
+                    if (progressFill) {
+                        progressFill.style.width = pct + '%';
+                        progressFill.textContent = pct + '%';
+                    }
+                    if (progressText) {
+                        progressText.textContent = `${completados} de ${totalModulosCount} módulos completados`;
+                    }
+                };
+                
+                checkboxes.forEach(cb => {
+                    cb.addEventListener('change', actualizarBarraProgreso);
+                });
+            }
+            
+        } catch (error) {
+            console.error('Error al cargar detalle:', error);
+            container.innerHTML = `
+                <div style="text-align: center; padding: var(--space-3xl);">
+                    <span style="font-size: 4rem;">❌</span>
+                    <h2 style="margin-top: var(--space-4);">Error al cargar</h2>
+                    <p style="color: var(--text-muted); margin-top: var(--space-4);">${error.message}</p>
+                    <button onclick="window.cambiarPagina('laboratorios')" class="btn btn-primary" style="margin-top: var(--space-lg);">
+                        📚 Volver a laboratorios
+                    </button>
+                </div>
+            `;
         }
     }
     
-    // Escuchar cambios en la URL (para cuando se navega con hash)
-    window.addEventListener('hashchange', function() {
-        if (window.location.hash.includes('detalle')) {
-            cargarDetalleLaboratorio();
+    // ============================================
+    // ESCAPE HTML (SEGURIDAD)
+    // ============================================
+    function escapeHtml(text) {
+        if (!text) return '';
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
+    }
+    
+    // ============================================
+    // BOTÓN VOLVER
+    // ============================================
+    document.getElementById('backBtn')?.addEventListener('click', () => {
+        if (typeof window.cambiarPagina === 'function') {
+            window.cambiarPagina('laboratorios');
+        } else {
+            window.location.hash = '#laboratorios';
         }
     });
     
-    // Ejecutar inicialización
-    if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', inicializarDetalle);
-    } else {
-        inicializarDetalle();
-    }
+    // ============================================
+    // ESCUCHAR CAMBIOS DE AUTENTICACIÓN
+    // ============================================
+    let recargandoPorAuth = false;
+    document.addEventListener('authChanged', () => {
+        if (!recargandoPorAuth) {
+            recargandoPorAuth = true;
+            setTimeout(() => {
+                cargarDetalle();
+                recargandoPorAuth = false;
+            }, 100);
+        }
+    });
+    
+    // Inicializar
+    cargarDetalle();
+})();
 </script>
