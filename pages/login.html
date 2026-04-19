@@ -1,41 +1,43 @@
 <!-- ============================================ -->
-<!-- PÁGINA: INICIO DE SESIÓN                     -->
+<!-- PÁGINA: INICIO DE SESIÓN (CORREGIDO)         -->
+<!-- Login con Firebase Auth + recuperar password -->
 <!-- ============================================ -->
 
 <div class="page fade-in">
     <div class="container" style="max-width: 500px;">
+        
         <div class="page-header" style="text-align: center; margin-bottom: var(--space-xl);">
             <h1>🔑 <span class="highlight">Iniciar Sesión</span></h1>
             <p style="color: var(--text-muted);">Accede a tu cuenta de AXON</p>
         </div>
-
+        
         <div class="form-container">
             <form id="loginForm">
                 <div class="form-group">
-                    <label>Correo electrónico *</label>
-                    <input type="email" id="loginEmail" required placeholder="ejemplo@dominio.com">
-                    <span class="error-message" id="errorEmail">Ingresa tu email</span>
+                    <label for="loginEmail">Correo electrónico *</label>
+                    <input type="email" id="loginEmail" name="email" required placeholder="ejemplo@dominio.com">
+                    <span class="error-message" id="errorEmail">Ingresa un email válido</span>
                 </div>
-
+                
                 <div class="form-group">
-                    <label>Contraseña *</label>
-                    <input type="password" id="loginPassword" required placeholder="Tu contraseña">
+                    <label for="loginPassword">Contraseña *</label>
+                    <input type="password" id="loginPassword" name="password" required placeholder="Tu contraseña">
                     <span class="error-message" id="errorPassword">Ingresa tu contraseña</span>
                 </div>
-
+                
                 <div style="text-align: right; margin-bottom: var(--space-md);">
                     <a href="#" id="forgotPasswordLink" style="color: var(--color-primary); font-size: var(--text-sm);">¿Olvidaste tu contraseña?</a>
                 </div>
-
+                
                 <div class="form-actions">
                     <button type="submit" class="btn btn-primary">🔓 Iniciar Sesión</button>
                 </div>
             </form>
-
+            
             <p style="text-align: center; margin-top: var(--space-lg);">
                 ¿No tienes cuenta? <a href="#registro" style="color: var(--color-primary);">Regístrate aquí</a>
             </p>
-
+            
             <div id="mensaje" style="display: none; margin-top: var(--space-md); padding: var(--space-md); border-radius: var(--radius-md);"></div>
         </div>
     </div>
@@ -47,33 +49,40 @@
     <div class="modal-container" style="max-width: 400px;">
         <div class="modal-header">
             <h3>🔐 Recuperar Contraseña</h3>
-            <button class="modal-close" onclick="cerrarModalReset()">✕</button>
+            <button class="modal-close" id="closeModalBtn">&times;</button>
         </div>
         <div class="modal-body">
             <p style="margin-bottom: var(--space-md);">Ingresa tu correo electrónico y te enviaremos un enlace para restablecer tu contraseña.</p>
             <div class="form-group">
-                <input type="email" id="resetEmail" placeholder="tu@email.com" style="width: 100%; padding: var(--space-3); border-radius: var(--radius-md); background: rgba(255,255,255,0.05); border: 1px solid var(--border-color); color: white;">
+                <input type="email" id="resetEmail" placeholder="tu@email.com" style="width: 100%;">
             </div>
             <div id="resetMensaje" style="display: none; margin-top: var(--space-md);"></div>
         </div>
         <div class="modal-footer">
-            <button class="btn btn-outline" onclick="cerrarModalReset()">Cancelar</button>
+            <button class="btn btn-outline" id="cancelResetBtn">Cancelar</button>
             <button class="btn btn-primary" id="sendResetBtn">Enviar enlace</button>
         </div>
     </div>
 </div>
 
 <script>
+(function() {
+    'use strict';
+    
     const form = document.getElementById('loginForm');
     const mensajeDiv = document.getElementById('mensaje');
     
-    document.getElementById('loginEmail').addEventListener('input', () => {
+    // Limpiar errores al escribir
+    document.getElementById('loginEmail')?.addEventListener('input', () => {
         document.getElementById('errorEmail').style.display = 'none';
     });
-    document.getElementById('loginPassword').addEventListener('input', () => {
+    document.getElementById('loginPassword')?.addEventListener('input', () => {
         document.getElementById('errorPassword').style.display = 'none';
     });
     
+    // ============================================
+    // INICIAR SESIÓN
+    // ============================================
     form.addEventListener('submit', async (e) => {
         e.preventDefault();
         
@@ -84,6 +93,7 @@
             document.getElementById('errorEmail').style.display = 'block';
             return;
         }
+        
         if (!password) {
             document.getElementById('errorPassword').style.display = 'block';
             return;
@@ -96,21 +106,36 @@
         
         try {
             const result = await window.iniciarSesion(email, password);
+            
             mensajeDiv.style.display = 'block';
             
             if (result.success) {
                 mensajeDiv.innerHTML = '✅ ' + result.message;
                 mensajeDiv.className = 'alert alert-success';
-                if (typeof window.actualizarUIUsuario === 'function') window.actualizarUIUsuario();
-                setTimeout(() => { window.location.href = '#inicio'; }, 1500);
+                
+                // Actualizar UI
+                if (typeof window.actualizarUIUsuario === 'function') {
+                    await window.actualizarUIUsuario(firebaseAuth.currentUser);
+                }
+                
+                // Redirigir al inicio
+                setTimeout(() => {
+                    if (typeof window.cambiarPagina === 'function') {
+                        window.cambiarPagina('inicio');
+                    } else {
+                        window.location.hash = '#inicio';
+                    }
+                }, 1500);
             } else {
                 mensajeDiv.innerHTML = '❌ ' + result.message;
                 mensajeDiv.className = 'alert alert-error';
                 btn.disabled = false;
                 btn.textContent = '🔓 Iniciar Sesión';
             }
+            
         } catch (error) {
-            mensajeDiv.innerHTML = '❌ Error al iniciar sesión';
+            console.error('Error en login:', error);
+            mensajeDiv.innerHTML = '❌ Error al iniciar sesión. Intenta nuevamente.';
             mensajeDiv.className = 'alert alert-error';
             mensajeDiv.style.display = 'block';
             btn.disabled = false;
@@ -118,25 +143,51 @@
         }
     });
     
+    // ============================================
+    // RECUPERAR CONTRASEÑA (MODAL)
+    // ============================================
     let modalAbierto = false;
-    document.getElementById('forgotPasswordLink').addEventListener('click', (e) => {
+    const modal = document.getElementById('resetPasswordModal');
+    const forgotLink = document.getElementById('forgotPasswordLink');
+    
+    function abrirModalReset() {
+        if (modal) {
+            modal.style.display = 'flex';
+            document.body.style.overflow = 'hidden';
+            document.getElementById('resetEmail').value = '';
+            document.getElementById('resetMensaje').style.display = 'none';
+            modalAbierto = true;
+        }
+    }
+    
+    function cerrarModalReset() {
+        if (modal) {
+            modal.style.display = 'none';
+            document.body.style.overflow = '';
+            modalAbierto = false;
+        }
+    }
+    
+    forgotLink?.addEventListener('click', (e) => {
         e.preventDefault();
-        const modal = document.getElementById('resetPasswordModal');
-        modal.style.display = 'flex';
-        document.body.style.overflow = 'hidden';
-        document.getElementById('resetEmail').value = '';
-        document.getElementById('resetMensaje').style.display = 'none';
-        modalAbierto = true;
+        abrirModalReset();
     });
     
-    window.cerrarModalReset = function() {
-        const modal = document.getElementById('resetPasswordModal');
-        modal.style.display = 'none';
-        document.body.style.overflow = '';
-        modalAbierto = false;
-    };
+    document.getElementById('closeModalBtn')?.addEventListener('click', cerrarModalReset);
+    document.getElementById('cancelResetBtn')?.addEventListener('click', cerrarModalReset);
     
-    document.getElementById('sendResetBtn').addEventListener('click', async () => {
+    // Cerrar al hacer clic fuera del modal
+    document.querySelector('.modal-overlay')?.addEventListener('click', cerrarModalReset);
+    
+    // Cerrar con tecla ESC
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && modalAbierto) {
+            cerrarModalReset();
+        }
+    });
+    
+    // Enviar enlace de recuperación
+    document.getElementById('sendResetBtn')?.addEventListener('click', async () => {
         const email = document.getElementById('resetEmail').value.trim();
         const resetMensaje = document.getElementById('resetMensaje');
         const btn = document.getElementById('sendResetBtn');
@@ -155,16 +206,20 @@
         try {
             const result = await window.restablecerPassword(email);
             resetMensaje.style.display = 'block';
+            
             if (result.success) {
                 resetMensaje.innerHTML = '✅ ' + result.message;
                 resetMensaje.className = 'alert alert-success';
-                setTimeout(() => window.cerrarModalReset(), 3000);
+                setTimeout(() => {
+                    cerrarModalReset();
+                }, 3000);
             } else {
                 resetMensaje.innerHTML = '❌ ' + result.message;
                 resetMensaje.className = 'alert alert-error';
             }
         } catch (error) {
-            resetMensaje.innerHTML = '❌ Error al enviar el enlace';
+            console.error('Error al enviar recuperación:', error);
+            resetMensaje.innerHTML = '❌ Error al enviar el enlace. Intenta nuevamente.';
             resetMensaje.className = 'alert alert-error';
             resetMensaje.style.display = 'block';
         } finally {
@@ -173,8 +228,5 @@
         }
     });
     
-    document.addEventListener('keydown', (e) => {
-        if (e.key === 'Escape' && modalAbierto) window.cerrarModalReset();
-    });
-    document.querySelector('.modal-overlay')?.addEventListener('click', window.cerrarModalReset);
+})();
 </script>
