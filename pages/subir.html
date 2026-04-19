@@ -1,40 +1,43 @@
 <!-- ============================================ -->
-<!-- PÁGINA: SUBIR LABORATORIO (REAL)              -->
+<!-- PÁGINA: SUBIR LABORATORIO (CORREGIDO)        -->
+<!-- Subida real con barra de progreso           -->
 <!-- ============================================ -->
 
 <div class="page fade-in">
     <div class="container" style="max-width: 700px;">
+        
         <div class="page-header" style="text-align: center; margin-bottom: var(--space-xl);">
             <h1>📤 <span class="highlight">Subir Laboratorio</span></h1>
-            <p style="color: var(--text-muted);">Comparte tu conocimiento con la comunidad</p>
+            <p style="color: var(--text-muted);">Comparte tu conocimiento con la comunidad académica</p>
         </div>
-
-        <!-- Verificar login -->
-        <div id="loginRequiredMsg" style="display: none; text-align: center; padding: var(--space-2xl); background: var(--bg-card); border-radius: var(--radius-xl);">
+        
+        <!-- Verificación de login -->
+        <div id="loginRequiredMsg" style="display: none; text-align: center; padding: var(--space-2xl); background: var(--bg-card); border-radius: var(--radius-xl); border: 1px solid var(--border-color);">
             <span style="font-size: 4rem;">🔒</span>
-            <h2>Acceso restringido</h2>
-            <p style="margin: var(--space-md) 0;">Debes iniciar sesión para subir laboratorios</p>
+            <h2 style="margin-top: var(--space-md);">Acceso restringido</h2>
+            <p style="color: var(--text-muted); margin: var(--space-md) 0;">Debes iniciar sesión para subir laboratorios</p>
             <button id="goToLoginBtn" class="btn btn-primary">🔑 Iniciar Sesión</button>
         </div>
-
+        
         <!-- Formulario de subida -->
         <div id="uploadFormContainer" class="form-container" style="display: none;">
-            <form id="uploadForm">
+            <form id="uploadForm" enctype="multipart/form-data">
+                
                 <div class="form-group">
                     <label for="labNombre">Nombre del Laboratorio *</label>
-                    <input type="text" id="labNombre" required placeholder="Ej: Introducción a Redes TCP/IP">
+                    <input type="text" id="labNombre" name="nombre" required placeholder="Ej: Introducción a Redes TCP/IP">
                     <span class="error-message" id="errorNombre">El nombre es requerido</span>
                 </div>
-
+                
                 <div class="form-group">
                     <label for="labAutor">Autor(es) *</label>
-                    <input type="text" id="labAutor" required placeholder="Ej: Dr. Juan Pérez">
+                    <input type="text" id="labAutor" name="autor" required placeholder="Ej: Dr. Juan Pérez, Ing. María Gómez">
                     <span class="error-message" id="errorAutor">El autor es requerido</span>
                 </div>
-
+                
                 <div class="form-group">
                     <label for="labCategoria">Categoría *</label>
-                    <select id="labCategoria" required>
+                    <select id="labCategoria" name="categoria" required>
                         <option value="">Selecciona una categoría</option>
                         <option value="redes">🌐 Redes</option>
                         <option value="programacion">💻 Programación</option>
@@ -44,41 +47,54 @@
                     </select>
                     <span class="error-message" id="errorCategoria">Selecciona una categoría</span>
                 </div>
-
+                
                 <div class="form-group">
                     <label for="labDescripcion">Descripción</label>
-                    <textarea id="labDescripcion" rows="4" placeholder="Describe el contenido del laboratorio..."></textarea>
+                    <textarea id="labDescripcion" name="descripcion" rows="4" placeholder="Describe el contenido del laboratorio, objetivos, requisitos, etc."></textarea>
                 </div>
-
+                
                 <div class="form-group">
                     <label for="labModulos">Módulos (separados por coma)</label>
-                    <input type="text" id="labModulos" placeholder="Ej: Módulo 1, Módulo 2, Módulo 3">
+                    <input type="text" id="labModulos" name="modulos" placeholder="Ej: Módulo 1: Conceptos básicos, Módulo 2: Práctica, Módulo 3: Evaluación">
                     <small>Ingresa los nombres de los módulos separados por coma</small>
                 </div>
-
+                
                 <div class="form-group">
-                    <label for="labArchivo">Archivo * (PDF, ZIP, DOCX)</label>
-                    <input type="file" id="labArchivo" accept=".pdf,.zip,.docx,.txt" required>
-                    <small>Máximo 10MB</small>
+                    <label for="labImagen">Imagen de portada (opcional)</label>
+                    <input type="file" id="labImagen" accept=".jpg,.jpeg,.png,.webp">
+                    <small>Formatos: JPG, PNG, WEBP (máx. 2MB). Se mostrará como portada del laboratorio.</small>
+                    <div id="imagenPreview" style="display: none; margin-top: var(--space-sm);">
+                        <img id="previewImg" src="" alt="Vista previa" style="max-width: 100%; max-height: 150px; border-radius: var(--radius-md);">
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <label for="labArchivo">Archivo del laboratorio *</label>
+                    <input type="file" id="labArchivo" accept=".pdf,.zip,.rar,.doc,.docx,.ppt,.pptx,.mp4,.webm" required>
+                    <small>Formatos: PDF, ZIP, DOC, PPT, MP4 (máx. 50MB)</small>
                     <span class="error-message" id="errorArchivo">Selecciona un archivo</span>
                 </div>
-
+                
                 <!-- Barra de progreso -->
-                <div id="uploadProgress" style="display: none; margin-bottom: var(--space-md);">
-                    <div style="background: var(--border-color); border-radius: var(--radius-full); height: 8px; overflow: hidden;">
-                        <div id="progressBar" style="width: 0%; height: 100%; background: linear-gradient(90deg, var(--color-primary), var(--color-secondary)); transition: width 0.3s;"></div>
+                <div id="uploadProgressContainer" style="display: none; margin-bottom: var(--space-md);">
+                    <div style="display: flex; justify-content: space-between; margin-bottom: var(--space-xs);">
+                        <span style="font-size: var(--text-sm); color: var(--text-muted);">Subiendo archivo...</span>
+                        <span id="progressPercent" style="font-size: var(--text-sm); color: var(--color-primary);">0%</span>
                     </div>
-                    <p id="progressText" style="margin-top: var(--space-sm); color: var(--text-muted); font-size: var(--text-sm);">Subiendo archivo...</p>
+                    <div style="background: var(--border-color); border-radius: var(--radius-full); height: 8px; overflow: hidden;">
+                        <div id="progressBar" style="width: 0%; height: 100%; background: linear-gradient(90deg, var(--color-primary), var(--color-secondary)); transition: width 0.3s ease;"></div>
+                    </div>
+                    <p id="progressStatus" style="margin-top: var(--space-xs); font-size: var(--text-xs); color: var(--text-muted);">Preparando...</p>
                 </div>
-
+                
                 <div class="form-actions">
                     <button type="submit" id="submitBtn" class="btn btn-primary">📤 Subir Laboratorio</button>
                     <button type="reset" class="btn btn-outline">🗑️ Limpiar</button>
                 </div>
             </form>
-
+            
             <div id="uploadSuccess" class="alert alert-success" style="display: none;">
-                ✅ ¡Laboratorio subido exitosamente!
+                ✅ ¡Laboratorio subido exitosamente! Redirigiendo...
             </div>
             <div id="uploadError" class="alert alert-error" style="display: none;">
                 ❌ Error al subir el laboratorio
@@ -88,9 +104,14 @@
 </div>
 
 <script>
+(function() {
+    'use strict';
+    
     let usuarioLogueado = false;
-
-    // Verificar login
+    
+    // ============================================
+    // VERIFICAR LOGIN
+    // ============================================
     firebaseAuth.onAuthStateChanged((user) => {
         usuarioLogueado = !!user;
         const loginRequiredMsg = document.getElementById('loginRequiredMsg');
@@ -103,7 +124,7 @@
             if (loginRequiredMsg) loginRequiredMsg.style.display = 'none';
             if (uploadFormContainer) uploadFormContainer.style.display = 'block';
             
-            // Cargar nombre del usuario
+            // Autocompletar autor con nombre del usuario
             firebaseDB.collection('usuarios').doc(user.uid).get().then(doc => {
                 if (doc.exists && doc.data().nombre) {
                     const autorInput = document.getElementById('labAutor');
@@ -114,13 +135,72 @@
             });
         }
     });
-
-    // Ir a login
+    
+    // ============================================
+    // IR A LOGIN
+    // ============================================
     document.getElementById('goToLoginBtn')?.addEventListener('click', () => {
-        window.location.href = '#login';
+        if (typeof window.cambiarPagina === 'function') {
+            window.cambiarPagina('login');
+        } else {
+            window.location.hash = '#login';
+        }
     });
-
-    // Subir laboratorio
+    
+    // ============================================
+    // PREVISUALIZACIÓN DE IMAGEN
+    // ============================================
+    const imagenInput = document.getElementById('labImagen');
+    const imagenPreview = document.getElementById('imagenPreview');
+    const previewImg = document.getElementById('previewImg');
+    
+    if (imagenInput) {
+        imagenInput.addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (file && file.type.startsWith('image/')) {
+                const reader = new FileReader();
+                reader.onload = (event) => {
+                    previewImg.src = event.target.result;
+                    imagenPreview.style.display = 'block';
+                };
+                reader.readAsDataURL(file);
+            } else {
+                imagenPreview.style.display = 'none';
+                previewImg.src = '';
+            }
+        });
+    }
+    
+    // ============================================
+    // LIMPIAR ERRORES AL ESCRIBIR
+    // ============================================
+    document.getElementById('labNombre')?.addEventListener('input', () => {
+        document.getElementById('errorNombre').style.display = 'none';
+    });
+    document.getElementById('labAutor')?.addEventListener('input', () => {
+        document.getElementById('errorAutor').style.display = 'none';
+    });
+    document.getElementById('labCategoria')?.addEventListener('change', () => {
+        document.getElementById('errorCategoria').style.display = 'none';
+    });
+    document.getElementById('labArchivo')?.addEventListener('change', () => {
+        document.getElementById('errorArchivo').style.display = 'none';
+    });
+    
+    // ============================================
+    // VALIDAR TAMAÑO DE ARCHIVO
+    // ============================================
+    function validarTamanoArchivo(file, maxMB) {
+        const maxBytes = maxMB * 1024 * 1024;
+        if (file.size > maxBytes) {
+            return { valid: false, message: `El archivo no puede superar los ${maxMB}MB` };
+        }
+        return { valid: true, message: '' };
+    }
+    
+    // ============================================
+    // SUBIR LABORATORIO
+    // ============================================
     const form = document.getElementById('uploadForm');
     
     form.addEventListener('submit', async (e) => {
@@ -128,7 +208,7 @@
         
         const user = firebaseAuth.currentUser;
         if (!user) {
-            alert('Debes iniciar sesión');
+            alert('Debes iniciar sesión para subir laboratorios');
             return;
         }
         
@@ -137,100 +217,137 @@
         const autor = document.getElementById('labAutor').value.trim();
         const categoria = document.getElementById('labCategoria').value;
         const archivo = document.getElementById('labArchivo').files[0];
+        const imagen = document.getElementById('labImagen').files[0];
+        
+        let isValid = true;
         
         if (!nombre) {
             document.getElementById('errorNombre').style.display = 'block';
-            return;
+            isValid = false;
         } else {
             document.getElementById('errorNombre').style.display = 'none';
         }
         
         if (!autor) {
             document.getElementById('errorAutor').style.display = 'block';
-            return;
+            isValid = false;
         } else {
             document.getElementById('errorAutor').style.display = 'none';
         }
         
         if (!categoria) {
             document.getElementById('errorCategoria').style.display = 'block';
-            return;
+            isValid = false;
         } else {
             document.getElementById('errorCategoria').style.display = 'none';
         }
         
         if (!archivo) {
             document.getElementById('errorArchivo').style.display = 'block';
-            return;
+            isValid = false;
         } else {
             document.getElementById('errorArchivo').style.display = 'none';
+            
+            // Validar tamaño (50MB)
+            const validArchivo = validarTamanoArchivo(archivo, 50);
+            if (!validArchivo.valid) {
+                alert(validArchivo.message);
+                isValid = false;
+            }
         }
         
-        // Validar tamaño (10MB)
-        if (archivo.size > 10 * 1024 * 1024) {
-            alert('El archivo no puede superar los 10MB');
-            return;
+        // Validar imagen (2MB)
+        if (imagen) {
+            const validImagen = validarTamanoArchivo(imagen, 2);
+            if (!validImagen.valid) {
+                alert('Imagen: ' + validImagen.message);
+                isValid = false;
+            }
         }
+        
+        if (!isValid) return;
         
         // Mostrar progreso
-        document.getElementById('uploadProgress').style.display = 'block';
-        document.getElementById('submitBtn').disabled = true;
-        document.getElementById('submitBtn').textContent = '⏳ Subiendo...';
+        const progressContainer = document.getElementById('uploadProgressContainer');
+        const progressBar = document.getElementById('progressBar');
+        const progressPercent = document.getElementById('progressPercent');
+        const progressStatus = document.getElementById('progressStatus');
+        const submitBtn = document.getElementById('submitBtn');
+        
+        progressContainer.style.display = 'block';
+        submitBtn.disabled = true;
+        submitBtn.textContent = '⏳ Subiendo...';
         
         // Preparar datos
         const modulosInput = document.getElementById('labModulos').value;
-        const modulos = modulosInput ? modulosInput.split(',').map(m => m.trim()) : [];
+        const modulos = modulosInput ? modulosInput.split(',').map(m => m.trim()).filter(m => m) : [];
         
         const labData = {
             nombre: nombre,
             autor: autor,
             categoria: categoria,
             descripcion: document.getElementById('labDescripcion').value,
-            modulos: modulos
+            modulos: modulos,
+            onProgress: (progress) => {
+                const pct = Math.round(progress);
+                progressBar.style.width = pct + '%';
+                if (progressPercent) progressPercent.textContent = pct + '%';
+                if (progressStatus) progressStatus.textContent = `Subiendo archivo... ${pct}%`;
+            }
         };
         
         try {
-            const result = await window.agregarLaboratorio(labData, archivo);
+            const result = await window.agregarLaboratorio(labData, archivo, imagen || null);
             
             if (result.success) {
-                document.getElementById('uploadSuccess').style.display = 'block';
-                form.reset();
+                progressBar.style.width = '100%';
+                progressPercent.textContent = '100%';
+                progressStatus.textContent = '¡Completado! Redirigiendo...';
+                
+                const successDiv = document.getElementById('uploadSuccess');
+                successDiv.style.display = 'block';
+                
                 setTimeout(() => {
-                    document.getElementById('uploadSuccess').style.display = 'none';
-                    window.location.href = '#laboratorios';
+                    if (typeof window.cambiarPagina === 'function') {
+                        window.cambiarPagina('laboratorios');
+                    } else {
+                        window.location.hash = '#laboratorios';
+                    }
                 }, 2000);
             } else {
-                document.getElementById('uploadError').style.display = 'block';
-                document.getElementById('uploadError').innerHTML = '❌ ' + result.message;
-                setTimeout(() => {
-                    document.getElementById('uploadError').style.display = 'none';
-                }, 3000);
+                throw new Error(result.message);
             }
+            
         } catch (error) {
             console.error('Error:', error);
-            document.getElementById('uploadError').style.display = 'block';
+            const errorDiv = document.getElementById('uploadError');
+            errorDiv.innerHTML = '❌ ' + (error.message || 'Error al subir el laboratorio');
+            errorDiv.style.display = 'block';
             setTimeout(() => {
-                document.getElementById('uploadError').style.display = 'none';
-            }, 3000);
+                errorDiv.style.display = 'none';
+            }, 5000);
         } finally {
-            document.getElementById('uploadProgress').style.display = 'none';
-            document.getElementById('submitBtn').disabled = false;
-            document.getElementById('submitBtn').textContent = '📤 Subir Laboratorio';
-            document.getElementById('progressBar').style.width = '0%';
+            progressContainer.style.display = 'none';
+            submitBtn.disabled = false;
+            submitBtn.textContent = '📤 Subir Laboratorio';
+            progressBar.style.width = '0%';
+            if (progressPercent) progressPercent.textContent = '0%';
         }
     });
     
-    // Limpiar errores al escribir
-    document.getElementById('labNombre').addEventListener('input', () => {
-        document.getElementById('errorNombre').style.display = 'none';
+    // Resetear formulario
+    form.querySelector('button[type="reset"]')?.addEventListener('click', () => {
+        setTimeout(() => {
+            document.getElementById('errorNombre').style.display = 'none';
+            document.getElementById('errorAutor').style.display = 'none';
+            document.getElementById('errorCategoria').style.display = 'none';
+            document.getElementById('errorArchivo').style.display = 'none';
+            document.getElementById('uploadSuccess').style.display = 'none';
+            document.getElementById('uploadError').style.display = 'none';
+            imagenPreview.style.display = 'none';
+            previewImg.src = '';
+        }, 100);
     });
-    document.getElementById('labAutor').addEventListener('input', () => {
-        document.getElementById('errorAutor').style.display = 'none';
-    });
-    document.getElementById('labCategoria').addEventListener('change', () => {
-        document.getElementById('errorCategoria').style.display = 'none';
-    });
-    document.getElementById('labArchivo').addEventListener('change', () => {
-        document.getElementById('errorArchivo').style.display = 'none';
-    });
+    
+})();
 </script>
