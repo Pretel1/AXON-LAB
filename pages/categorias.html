@@ -1,22 +1,21 @@
 <!-- ============================================ -->
-<!-- PÁGINA: CATEGORÍAS                           -->
+<!-- PÁGINA: CATEGORÍAS (CORREGIDO)               -->
+<!-- Explorar laboratorios por categoría          -->
 <!-- ============================================ -->
 
 <div class="page fade-in">
     <div class="page-header" style="text-align: center; margin-bottom: var(--space-xl);">
         <h1>📂 <span class="highlight">Categorías</span></h1>
-        <p style="color: var(--color-gray);">Explora laboratorios por área de conocimiento</p>
+        <p style="color: var(--text-muted);">Explora laboratorios por área de conocimiento</p>
     </div>
-
+    
     <div class="categories-grid" id="categoriesGridFull" style="max-width: 900px; margin: 0 auto;">
-        <!-- Las categorías se cargarán dinámicamente -->
-        <div class="category-card" style="text-align: center; padding: var(--space-lg);">
-            <div class="category-icon">🌐</div>
-            <div class="category-name">Redes</div>
-            <div class="category-count">Cargando...</div>
+        <div style="text-align: center; grid-column: 1/-1; padding: var(--space-3xl);">
+            <div class="loader-spinner" style="margin: 0 auto;"></div>
+            <p style="margin-top: var(--space-md);">Cargando categorías...</p>
         </div>
     </div>
-
+    
     <!-- Laboratorios por categoría seleccionada -->
     <div id="labsPorCategoria" style="margin-top: var(--space-2xl); display: none;">
         <h2 id="categoriaSeleccionada" class="text-center" style="margin-bottom: var(--space-lg);"></h2>
@@ -28,34 +27,37 @@
 </div>
 
 <script>
+(function() {
+    'use strict';
+    
     let todasLasCategorias = [];
     let todosLosLabs = [];
     
-    function cargarDatos() {
-        const guardados = localStorage.getItem('axon_laboratorios');
-        if (guardados) {
-            todosLosLabs = JSON.parse(guardados);
-        } else {
-            todosLosLabs = [
-                { id: 1, nombre: "Introducción a Redes TCP/IP", autor: "Dr. Carlos Martínez", categoria: "redes", descargas: 245, icono: "🌐" },
-                { id: 2, nombre: "Programación en Python", autor: "Ing. Ana Rodríguez", categoria: "programacion", descargas: 189, icono: "🐍" },
-                { id: 3, nombre: "Diseño de Bases de Datos", autor: "Dra. María Fernández", categoria: "bases-datos", descargas: 312, icono: "🗄️" },
-                { id: 4, nombre: "Machine Learning", autor: "Dr. Roberto Sánchez", categoria: "inteligencia", descargas: 178, icono: "🤖" },
-                { id: 5, nombre: "Seguridad Web", autor: "Ing. Laura Torres", categoria: "seguridad", descargas: 267, icono: "🔒" }
-            ];
+    // ============================================
+    // CARGAR DATOS
+    // ============================================
+    async function cargarDatos() {
+        try {
+            todosLosLabs = await window.obtenerLaboratorios();
+            todasLasCategorias = await window.obtenerCategorias();
+            renderizarCategorias();
+        } catch (error) {
+            console.error('Error al cargar datos:', error);
+            const container = document.getElementById('categoriesGridFull');
+            container.innerHTML = `
+                <div style="text-align: center; grid-column: 1/-1; padding: var(--space-3xl);">
+                    <span style="font-size: 3rem;">❌</span>
+                    <h3>Error al cargar</h3>
+                    <p style="color: var(--text-muted);">No se pudieron cargar las categorías</p>
+                    <button onclick="location.reload()" class="btn btn-primary" style="margin-top: var(--space-md);">🔄 Reintentar</button>
+                </div>
+            `;
         }
-        
-        todasLasCategorias = [
-            { id: "redes", nombre: "Redes", icono: "🌐", color: "#00d4ff" },
-            { id: "programacion", nombre: "Programación", icono: "💻", color: "#00ff88" },
-            { id: "bases-datos", nombre: "Bases de Datos", icono: "🗄️", color: "#ffaa00" },
-            { id: "inteligencia", nombre: "Inteligencia Artificial", icono: "🧠", color: "#b300ff" },
-            { id: "seguridad", nombre: "Seguridad", icono: "🔒", color: "#ff3366" }
-        ];
-        
-        renderizarCategorias();
     }
     
+    // ============================================
+    // RENDERIZAR CATEGORÍAS
+    // ============================================
     function renderizarCategorias() {
         const container = document.getElementById('categoriesGridFull');
         if (!container) return;
@@ -65,15 +67,25 @@
             conteo[lab.categoria] = (conteo[lab.categoria] || 0) + 1;
         });
         
+        if (todasLasCategorias.length === 0) {
+            container.innerHTML = `
+                <div style="text-align: center; grid-column: 1/-1; padding: var(--space-3xl);">
+                    <span style="font-size: 3rem;">📭</span>
+                    <h3>No hay categorías disponibles</h3>
+                </div>
+            `;
+            return;
+        }
+        
         container.innerHTML = todasLasCategorias.map(cat => `
-            <div class="category-card" data-categoria="${cat.id}" style="cursor: pointer; text-align: center; padding: var(--space-xl);">
+            <div class="category-card" data-categoria="${cat.id}" style="cursor: pointer;">
                 <div class="category-icon" style="font-size: 3rem;">${cat.icono}</div>
                 <div class="category-name" style="font-size: var(--text-lg); font-weight: 600; margin: var(--space-sm) 0;">${cat.nombre}</div>
-                <div class="category-count" style="color: var(--color-gray);">${conteo[cat.id] || 0} laboratorios</div>
+                <div class="category-count" style="color: var(--text-muted);">${conteo[cat.id] || 0} laboratorios</div>
             </div>
         `).join('');
         
-        // Agregar event listeners
+        // Event listeners para las tarjetas
         document.querySelectorAll('.category-card').forEach(card => {
             card.addEventListener('click', () => {
                 const categoriaId = card.getAttribute('data-categoria');
@@ -85,6 +97,9 @@
         });
     }
     
+    // ============================================
+    // MOSTRAR LABORATORIOS POR CATEGORÍA
+    // ============================================
     function mostrarLaboratoriosPorCategoria(categoria) {
         const labsFiltrados = todosLosLabs.filter(lab => lab.categoria === categoria.id);
         const categoriaNombre = categoria.nombre;
@@ -92,50 +107,85 @@
         
         document.getElementById('categoriesGridFull').style.display = 'none';
         document.getElementById('labsPorCategoria').style.display = 'block';
-        document.getElementById('categoriaSeleccionada').innerHTML = `${categoriaIcono} ${categoriaNombre} <span style="color: var(--color-gray); font-size: var(--text-base);">(${labsFiltrados.length} laboratorios)</span>`;
+        document.getElementById('categoriaSeleccionada').innerHTML = `${categoriaIcono} ${categoriaNombre} <span style="color: var(--text-muted); font-size: var(--text-base);">(${labsFiltrados.length} laboratorios)</span>`;
         
         const container = document.getElementById('labsGridCategoria');
+        
+        if (labsFiltrados.length === 0) {
+            container.innerHTML = `
+                <div style="text-align: center; grid-column: 1/-1; padding: var(--space-3xl);">
+                    <span style="font-size: 3rem;">📭</span>
+                    <h3>No hay laboratorios en esta categoría</h3>
+                </div>
+            `;
+            return;
+        }
+        
         const getIconoCategoria = (cat) => {
             const icons = { redes: '🌐', programacion: '💻', 'bases-datos': '🗄️', inteligencia: '🧠', seguridad: '🔒' };
             return icons[cat] || '📚';
         };
         
         container.innerHTML = labsFiltrados.map(lab => `
-            <div class="lab-card">
-                <div class="lab-card-image">${lab.icono || getIconoCategoria(lab.categoria)}</div>
+            <div class="lab-card" data-id="${lab.id}" style="cursor: pointer;">
+                <div class="lab-card-image" style="background: linear-gradient(135deg, var(--color-primary), var(--color-secondary)); display: flex; align-items: center; justify-content: center; font-size: 3rem;">
+                    ${lab.imagenURL ? `<img src="${lab.imagenURL}" alt="${escapeHtml(lab.nombre)}" style="width: 100%; height: 100%; object-fit: cover;">` : (lab.icono || getIconoCategoria(lab.categoria))}
+                </div>
                 <div class="lab-card-content">
-                    <h3 class="lab-card-title">${lab.nombre}</h3>
-                    <p class="lab-card-author">👨‍🏫 ${lab.autor}</p>
+                    <h3 class="lab-card-title">${escapeHtml(lab.nombre)}</h3>
+                    <p class="lab-card-author">👨‍🏫 ${escapeHtml(lab.autor)}</p>
                     <div class="lab-card-stats">
-                        <span>📥 ${lab.descargas || 0} descargas</span>
+                        <span>📥 ${lab.descargas || 0}</span>
+                        <span>👁️ ${lab.vistas || 0}</span>
                     </div>
                     <div style="margin-top: var(--space-md);">
-                        <button class="btn-ver-detalle" data-id="${lab.id}" style="background: var(--color-primary); border: none; padding: 0.5rem 1rem; border-radius: var(--radius-md); color: white; cursor: pointer;">👁️ Ver detalle</button>
+                        <button class="btn-ver-detalle" data-id="${lab.id}" style="background: var(--color-primary); border: none; padding: 0.5rem 1rem; border-radius: var(--radius-md); color: white; cursor: pointer;">
+                            👁️ Ver detalle
+                        </button>
                     </div>
                 </div>
             </div>
         `).join('');
         
+        // Event listeners para ver detalle
         document.querySelectorAll('.btn-ver-detalle').forEach(btn => {
-            btn.addEventListener('click', () => {
+            btn.addEventListener('click', (e) => {
+                e.stopPropagation();
                 const id = btn.getAttribute('data-id');
                 if (typeof window.cambiarPagina === 'function') {
                     window.cambiarPagina('detalle', { id: id });
                 } else {
-                    window.location.href = `#detalle?id=${id}`;
+                    window.location.hash = `detalle?id=${id}`;
                 }
             });
         });
         
+        // Clic en la tarjeta completa
+        document.querySelectorAll('#labsGridCategoria .lab-card').forEach(card => {
+            card.addEventListener('click', (e) => {
+                if (e.target.classList.contains('btn-ver-detalle')) return;
+                const id = card.getAttribute('data-id');
+                if (typeof window.cambiarPagina === 'function') {
+                    window.cambiarPagina('detalle', { id: id });
+                }
+            });
+        });
+        
+        // Botón para volver
         document.getElementById('cerrarCategoriaBtn').onclick = () => {
             document.getElementById('categoriesGridFull').style.display = 'grid';
             document.getElementById('labsPorCategoria').style.display = 'none';
         };
     }
     
-    if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', cargarDatos);
-    } else {
-        cargarDatos();
+    function escapeHtml(text) {
+        if (!text) return '';
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
     }
+    
+    cargarDatos();
+    
+})();
 </script>
