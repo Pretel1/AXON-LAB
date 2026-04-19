@@ -1,21 +1,22 @@
 <!-- ============================================ -->
-<!-- PÁGINA: INICIO (Dashboard de bienvenida)    -->
+<!-- PÁGINA: INICIO (DASHBOARD CORREGIDO)         -->
+<!-- Muestra resumen de laboratorios y estadísticas -->
 <!-- ============================================ -->
 
 <div class="page fade-in">
-
+    
     <!-- ============================================ -->
-    <!-- SECCIÓN HERO -->
+    <!-- SECCIÓN HERO                                 -->
     <!-- ============================================ -->
     <section class="hero">
         <div class="hero-container">
             <div>
                 <h1 class="hero-title">Repositorio de <span class="highlight">Laboratorios Académicos</span></h1>
                 <p class="hero-subtitle">AXON - Accede, comparte y gestiona laboratorios de todas las áreas del conocimiento</p>
-                <p class="hero-description">Más de 1,000 laboratorios disponibles para estudiantes y docentes. Aprende con recursos de calidad, comparte tus proyectos y sigue tu progreso.</p>
+                <p class="hero-description">Explora laboratorios de calidad, comparte tus proyectos y sigue tu progreso de aprendizaje.</p>
                 <div class="hero-buttons">
-                    <a href="#laboratorios" class="btn btn-primary" data-page="laboratorios">📚 Explorar Laboratorios</a>
-                    <a href="#subir" class="btn btn-outline" data-page="subir" id="heroSubirBtn" style="display: none;">📤 Subir Laboratorio</a>
+                    <a href="#laboratorios" class="btn btn-primary">📚 Explorar Laboratorios</a>
+                    <a href="#subir" class="btn btn-outline" id="heroSubirBtn" style="display: none;">📤 Subir Laboratorio</a>
                 </div>
                 <div class="hero-stats">
                     <div class="hero-stat">
@@ -37,60 +38,38 @@
             </div>
         </div>
     </section>
-
+    
     <!-- ============================================ -->
-    <!-- SECCIÓN DE CATEGORÍAS DESTACADAS -->
+    <!-- SECCIÓN DE CATEGORÍAS DESTACADAS            -->
     <!-- ============================================ -->
     <section class="section section-dark">
         <div class="container">
             <h2 class="text-center" style="margin-bottom: var(--space-xl);">📂 Explora por <span class="highlight">Categorías</span></h2>
-            <div class="categories-grid" id="categoriesGrid">
-                <!-- Las categorías se cargarán dinámicamente con JavaScript -->
-                <div class="category-card">
-                    <div class="category-icon">🌐</div>
-                    <div class="category-name">Redes</div>
-                    <div class="category-count">Cargando...</div>
-                </div>
-                <div class="category-card">
-                    <div class="category-icon">💻</div>
-                    <div class="category-name">Programación</div>
-                    <div class="category-count">Cargando...</div>
-                </div>
-                <div class="category-card">
-                    <div class="category-icon">🗄️</div>
-                    <div class="category-name">Bases de Datos</div>
-                    <div class="category-count">Cargando...</div>
-                </div>
-                <div class="category-card">
-                    <div class="category-icon">🧠</div>
-                    <div class="category-name">IA</div>
-                    <div class="category-count">Cargando...</div>
-                </div>
-                <div class="category-card">
-                    <div class="category-icon">🔒</div>
-                    <div class="category-name">Seguridad</div>
-                    <div class="category-count">Cargando...</div>
+            <div class="categories-grid" id="homeCategoriesGrid">
+                <div style="text-align: center; grid-column: 1/-1; padding: var(--space-3xl);">
+                    <div class="loader-spinner" style="margin: 0 auto;"></div>
+                    <p style="margin-top: var(--space-md);">Cargando categorías...</p>
                 </div>
             </div>
         </div>
     </section>
-
+    
     <!-- ============================================ -->
-    <!-- SECCIÓN DE LABORATORIOS RECIENTES -->
+    <!-- SECCIÓN DE LABORATORIOS RECIENTES            -->
     <!-- ============================================ -->
     <section class="section">
         <div class="container">
             <h2 class="text-center" style="margin-bottom: var(--space-xl);">🔥 Laboratorios <span class="highlight">Recientes</span></h2>
             
-            <!-- Buscador y Filtros -->
-            <div class="search-section">
+            <!-- Buscador y Filtros Rápidos -->
+            <div class="search-section" style="max-width: 800px; margin: 0 auto var(--space-2xl) auto;">
                 <div class="search-box">
                     <span class="search-icon">🔍</span>
-                    <input type="text" id="searchInput" class="search-input" placeholder="Buscar por nombre, autor o categoría...">
+                    <input type="text" id="homeSearchInput" class="search-input" placeholder="Buscar laboratorios...">
                 </div>
-                <div class="filter-group">
+                <div class="filter-group" style="justify-content: center; margin-top: var(--space-md);">
                     <span class="filter-label">Filtrar por:</span>
-                    <select id="categoryFilter" class="filter-select">
+                    <select id="homeCategoryFilter" class="filter-select">
                         <option value="todas">📂 Todas las categorías</option>
                         <option value="redes">🌐 Redes</option>
                         <option value="programacion">💻 Programación</option>
@@ -100,31 +79,22 @@
                     </select>
                 </div>
             </div>
-
-            <div class="results-info">
-                <span id="resultsCount">0</span> laboratorios encontrados
-            </div>
-
-            <div class="labs-grid" id="labsGrid">
-                <!-- Los laboratorios se cargarán dinámicamente con JavaScript -->
-                <div class="lab-card">
-                    <div class="lab-card-image">📚</div>
-                    <div class="lab-card-content">
-                        <span class="lab-card-category">Cargando...</span>
-                        <h3 class="lab-card-title">Cargando laboratorios...</h3>
-                        <p class="lab-card-author">Cargando...</p>
-                        <div class="lab-card-stats">
-                            <span>📥 Cargando</span>
-                            <span>👁️ Cargando</span>
-                        </div>
-                    </div>
+            
+            <div class="labs-grid" id="homeLabsGrid">
+                <div style="text-align: center; grid-column: 1/-1; padding: var(--space-3xl);">
+                    <div class="loader-spinner" style="margin: 0 auto;"></div>
+                    <p style="margin-top: var(--space-md);">Cargando laboratorios...</p>
                 </div>
+            </div>
+            
+            <div style="text-align: center; margin-top: var(--space-xl);">
+                <a href="#laboratorios" class="btn btn-outline">Ver todos los laboratorios →</a>
             </div>
         </div>
     </section>
-
+    
     <!-- ============================================ -->
-    <!-- SECCIÓN DE ESTADÍSTICAS GLOBALES -->
+    <!-- SECCIÓN DE ESTADÍSTICAS GLOBALES             -->
     <!-- ============================================ -->
     <section class="section section-light">
         <div class="container">
@@ -138,226 +108,270 @@
                     <div class="stat-label">Autores Contribuyentes</div>
                 </div>
                 <div class="stat-item">
-                    <div class="stat-number" id="globalCategorias">0</div>
+                    <div class="stat-number" id="globalCategoriasStat">0</div>
                     <div class="stat-label">Categorías</div>
                 </div>
                 <div class="stat-item">
-                    <div class="stat-number" id="globalUsuarios">0</div>
-                    <div class="stat-label">Usuarios Activos</div>
+                    <div class="stat-number" id="globalDescargasStat">0</div>
+                    <div class="stat-label">Total Descargas</div>
                 </div>
             </div>
         </div>
     </section>
-
+    
     <!-- ============================================ -->
-    <!-- CARRUSEL DE LABORATORIOS DESTACADOS -->
+    <!-- CARRUSEL DE LABORATORIOS DESTACADOS          -->
     <!-- ============================================ -->
     <section class="section">
         <div class="container">
             <h2 class="text-center" style="margin-bottom: var(--space-xl);">⭐ Laboratorios <span class="highlight">Destacados</span></h2>
             
             <div class="carousel-container">
-                <div class="carousel-track" id="carouselTrack">
-                    <!-- Los laboratorios destacados se cargarán dinámicamente -->
-                    <div class="carousel-card lab-card">
-                        <div class="lab-card-image">⭐</div>
-                        <div class="lab-card-content">
-                            <span class="lab-card-category">Destacado</span>
-                            <h3 class="lab-card-title">Cargando...</h3>
-                            <p class="lab-card-author">Cargando...</p>
-                        </div>
+                <div class="carousel-track" id="homeCarouselTrack">
+                    <div style="text-align: center; width: 100%; padding: var(--space-3xl);">
+                        <div class="loader-spinner" style="margin: 0 auto;"></div>
+                        <p style="margin-top: var(--space-md);">Cargando destacados...</p>
                     </div>
                 </div>
-                <div class="carousel-indicators" id="carouselIndicators"></div>
+                <div class="carousel-indicators" id="homeCarouselIndicators"></div>
             </div>
         </div>
     </section>
-
+    
 </div>
 
-<!-- ============================================ -->
-<!-- SCRIPT PARA CARGAR DATOS DINÁMICAMENTE        -->
-<!-- ============================================ -->
 <script>
-    // Función para cargar los datos del inicio
-    function cargarInicio() {
-        console.log('Cargando página de inicio...');
-        
-        // Verificar si los datos están disponibles globalmente
-        if (typeof window.datosAxon !== 'undefined' && window.datosAxon.laboratorios) {
-            actualizarEstadisticas(window.datosAxon.laboratorios);
-            actualizarCategorias(window.datosAxon.laboratorios, window.datosAxon.categorias);
-            actualizarLaboratoriosRecientes(window.datosAxon.laboratorios);
-            actualizarLaboratoriosDestacados(window.datosAxon.laboratorios);
-            actualizarHeroStats(window.datosAxon.laboratorios);
-        } else {
-            // Si no hay datos, intentar cargar desde localStorage o usar datos por defecto
-            cargarDatosDesdeStorage();
+(function() {
+    'use strict';
+    
+    let todosLosLaboratorios = [];
+    let todasLasCategorias = [];
+    let searchTimeout = null;
+    
+    // ============================================
+    // CARGAR DATOS INICIALES
+    // ============================================
+    async function cargarDatosIniciales() {
+        try {
+            todosLosLaboratorios = await window.obtenerLaboratorios();
+            todasLasCategorias = await window.obtenerCategorias();
+            
+            actualizarEstadisticasHero();
+            actualizarEstadisticasGlobales();
+            renderizarCategorias();
+            renderizarLaboratoriosRecientes(todosLosLaboratorios);
+            renderizarLaboratoriosDestacados();
+            
+        } catch (error) {
+            console.error('Error al cargar datos iniciales:', error);
         }
     }
     
-    // Cargar datos desde localStorage o usar datos simulados
-    function cargarDatosDesdeStorage() {
-        let laboratorios = [];
-        const guardados = localStorage.getItem('axon_laboratorios');
+    // ============================================
+    // ACTUALIZAR ESTADÍSTICAS DEL HERO
+    // ============================================
+    function actualizarEstadisticasHero() {
+        const totalLabs = todosLosLaboratorios.length;
+        const totalCategorias = todasLasCategorias.length;
+        const totalDescargas = todosLosLaboratorios.reduce((sum, lab) => sum + (lab.descargas || 0), 0);
         
-        if (guardados) {
-            laboratorios = JSON.parse(guardados);
-        } else {
-            // Datos simulados por defecto
-            laboratorios = [
-                { id: 1, nombre: "Introducción a Redes TCP/IP", autor: "Dr. Carlos Martínez", categoria: "redes", descripcion: "Laboratorio básico sobre fundamentos de redes.", archivo: "lab1.pdf", fecha: "2024-01-15", descargas: 245, vistas: 1250, icono: "🌐" },
-                { id: 2, nombre: "Programación en Python para Data Science", autor: "Ing. Ana Rodríguez", categoria: "programacion", descripcion: "Laboratorio práctico de Python.", archivo: "lab2.zip", fecha: "2024-01-20", descargas: 189, vistas: 890, icono: "🐍" },
-                { id: 3, nombre: "Diseño de Bases de Datos Relacionales", autor: "Dra. María Fernández", categoria: "bases-datos", descripcion: "Laboratorio de modelado de datos.", archivo: "lab3.pdf", fecha: "2024-01-10", descargas: 312, vistas: 1560, icono: "🗄️" },
-                { id: 4, nombre: "Introducción a Machine Learning", autor: "Dr. Roberto Sánchez", categoria: "inteligencia", descripcion: "Laboratorio introductorio a ML.", archivo: "lab4.zip", fecha: "2024-01-25", descargas: 178, vistas: 1020, icono: "🤖" },
-                { id: 5, nombre: "Seguridad en Aplicaciones Web", autor: "Ing. Laura Torres", categoria: "seguridad", descripcion: "Laboratorio de vulnerabilidades web.", archivo: "lab5.pdf", fecha: "2024-01-18", descargas: 267, vistas: 1340, icono: "🔒" },
-                { id: 6, nombre: "Enrutamiento y Switching Avanzado", autor: "Ing. Pablo Gómez", categoria: "redes", descripcion: "Configuración de routers y switches.", archivo: "lab6.pdf", fecha: "2024-02-01", descargas: 156, vistas: 980, icono: "🔄" },
-                { id: 7, nombre: "Desarrollo Web con React", autor: "Ing. Sofía Ramírez", categoria: "programacion", descripcion: "Aplicaciones modernas con React.", archivo: "lab7.zip", fecha: "2024-02-05", descargas: 134, vistas: 750, icono: "⚛️" },
-                { id: 8, nombre: "Redes Neuronales con TensorFlow", autor: "Dra. Carmen Díaz", categoria: "inteligencia", descripcion: "Deep learning con TensorFlow.", archivo: "lab8.zip", fecha: "2024-02-12", descargas: 145, vistas: 890, icono: "🧠" }
-            ];
-        }
+        const statLabs = document.getElementById('statLabs');
+        const statCategorias = document.getElementById('statCategorias');
+        const statDescargas = document.getElementById('statDescargas');
         
-        const categorias = [
-            { id: "redes", nombre: "Redes", icono: "🌐", color: "#00d4ff" },
-            { id: "programacion", nombre: "Programación", icono: "💻", color: "#00ff88" },
-            { id: "bases-datos", nombre: "Bases de Datos", icono: "🗄️", color: "#ffaa00" },
-            { id: "inteligencia", nombre: "Inteligencia Artificial", icono: "🧠", color: "#b300ff" },
-            { id: "seguridad", nombre: "Seguridad", icono: "🔒", color: "#ff3366" }
-        ];
-        
-        actualizarEstadisticas(laboratorios);
-        actualizarCategorias(laboratorios, categorias);
-        actualizarLaboratoriosRecientes(laboratorios);
-        actualizarLaboratoriosDestacados(laboratorios);
-        actualizarHeroStats(laboratorios);
+        if (statLabs) statLabs.textContent = totalLabs;
+        if (statCategorias) statCategorias.textContent = totalCategorias;
+        if (statDescargas) statDescargas.textContent = totalDescargas.toLocaleString();
     }
     
-    // Actualizar estadísticas globales
-    function actualizarEstadisticas(laboratorios) {
-        const totalLabs = laboratorios.length;
-        const autoresUnicos = [...new Set(laboratorios.map(lab => lab.autor))];
-        const categoriasUnicas = [...new Set(laboratorios.map(lab => lab.categoria))];
-        const totalDescargas = laboratorios.reduce((sum, lab) => sum + (lab.descargas || 0), 0);
+    // ============================================
+    // ACTUALIZAR ESTADÍSTICAS GLOBALES
+    // ============================================
+    function actualizarEstadisticasGlobales() {
+        const totalLabs = todosLosLaboratorios.length;
+        const autoresUnicos = [...new Set(todosLosLaboratorios.map(lab => lab.autor))];
+        const totalCategorias = todasLasCategorias.length;
+        const totalDescargas = todosLosLaboratorios.reduce((sum, lab) => sum + (lab.descargas || 0), 0);
         
         const globalLabs = document.getElementById('globalLabs');
         const globalAutores = document.getElementById('globalAutores');
-        const globalCategorias = document.getElementById('globalCategorias');
+        const globalCategoriasStat = document.getElementById('globalCategoriasStat');
+        const globalDescargasStat = document.getElementById('globalDescargasStat');
         
         if (globalLabs) globalLabs.textContent = totalLabs;
         if (globalAutores) globalAutores.textContent = autoresUnicos.length;
-        if (globalCategorias) globalCategorias.textContent = categoriasUnicas.length;
-        if (document.getElementById('globalUsuarios')) {
-            document.getElementById('globalUsuarios').textContent = Math.floor(totalLabs * 2.5);
-        }
+        if (globalCategoriasStat) globalCategoriasStat.textContent = totalCategorias;
+        if (globalDescargasStat) globalDescargasStat.textContent = totalDescargas.toLocaleString();
     }
     
-    // Actualizar categorías
-    function actualizarCategorias(laboratorios, categorias) {
-        const container = document.getElementById('categoriesGrid');
+    // ============================================
+    // RENDERIZAR CATEGORÍAS (SOLO PRIMERAS 4)
+    // ============================================
+    function renderizarCategorias() {
+        const container = document.getElementById('homeCategoriesGrid');
         if (!container) return;
         
-        // Contar laboratorios por categoría
         const conteo = {};
-        laboratorios.forEach(lab => {
+        todosLosLaboratorios.forEach(lab => {
             conteo[lab.categoria] = (conteo[lab.categoria] || 0) + 1;
         });
         
-        container.innerHTML = '';
-        categorias.forEach(cat => {
-            const count = conteo[cat.id] || 0;
-            const card = document.createElement('div');
-            card.className = 'category-card';
-            card.setAttribute('data-categoria', cat.id);
-            card.innerHTML = `
-                <div class="category-icon">${cat.icono}</div>
-                <div class="category-name">${cat.nombre}</div>
-                <div class="category-count">${count} laboratorios</div>
-            `;
+        const categoriasMostrar = todasLasCategorias.slice(0, 5);
+        
+        container.innerHTML = categoriasMostrar.map(cat => `
+            <div class="category-card" data-categoria="${cat.id}" style="cursor: pointer;">
+                <div class="category-icon" style="font-size: 3rem;">${cat.icono}</div>
+                <div class="category-name" style="font-size: var(--text-lg); font-weight: 600; margin: var(--space-sm) 0;">${cat.nombre}</div>
+                <div class="category-count" style="color: var(--text-muted);">${conteo[cat.id] || 0} laboratorios</div>
+            </div>
+        `).join('');
+        
+        document.querySelectorAll('#homeCategoriesGrid .category-card').forEach(card => {
             card.addEventListener('click', () => {
-                const filterSelect = document.getElementById('categoryFilter');
-                if (filterSelect) {
-                    filterSelect.value = cat.id;
-                    filterSelect.dispatchEvent(new Event('change'));
+                const categoriaId = card.getAttribute('data-categoria');
+                if (categoriaId && typeof window.cambiarPagina === 'function') {
+                    window.cambiarPagina('categorias');
+                    setTimeout(() => {
+                        const filterSelect = document.getElementById('categoryFilter');
+                        if (filterSelect) {
+                            filterSelect.value = categoriaId;
+                            filterSelect.dispatchEvent(new Event('change'));
+                        }
+                    }, 100);
                 }
-                // Scroll a la sección de laboratorios
-                document.querySelector('.labs-grid')?.scrollIntoView({ behavior: 'smooth' });
             });
-            container.appendChild(card);
         });
     }
     
-    // Actualizar laboratorios recientes
-    function actualizarLaboratoriosRecientes(laboratorios) {
-        const container = document.getElementById('labsGrid');
+    // ============================================
+    // RENDERIZAR LABORATORIOS RECIENTES
+    // ============================================
+    function renderizarLaboratoriosRecientes(laboratorios) {
+        const container = document.getElementById('homeLabsGrid');
         if (!container) return;
         
-        // Ordenar por fecha (más recientes primero)
-        const recientes = [...laboratorios].sort((a, b) => new Date(b.fecha) - new Date(a.fecha)).slice(0, 6);
+        const searchTerm = document.getElementById('homeSearchInput')?.value || '';
+        const categoria = document.getElementById('homeCategoryFilter')?.value || 'todas';
+        
+        let filtrados = window.filtrarLaboratorios(laboratorios, searchTerm, categoria);
+        const recientes = filtrados.slice(0, 6);
+        
+        if (recientes.length === 0) {
+            container.innerHTML = `
+                <div style="text-align: center; grid-column: 1/-1; padding: var(--space-3xl);">
+                    <span style="font-size: 3rem;">🔍</span>
+                    <h3>No se encontraron laboratorios</h3>
+                    <p style="color: var(--text-muted);">Intenta con otros términos de búsqueda</p>
+                </div>
+            `;
+            return;
+        }
         
         const getIconoCategoria = (cat) => {
             const icons = { redes: '🌐', programacion: '💻', 'bases-datos': '🗄️', inteligencia: '🧠', seguridad: '🔒' };
             return icons[cat] || '📚';
         };
         
+        const getNombreCategoria = (cat) => {
+            const nombres = { redes: 'Redes', programacion: 'Programación', 'bases-datos': 'Bases de Datos', inteligencia: 'IA', seguridad: 'Seguridad' };
+            return nombres[cat] || cat;
+        };
+        
         container.innerHTML = recientes.map(lab => `
-            <div class="lab-card" data-id="${lab.id}">
-                <div class="lab-card-image">${lab.icono || getIconoCategoria(lab.categoria)}</div>
+            <div class="lab-card" data-id="${lab.id}" style="cursor: pointer;">
+                <div class="lab-card-image" style="background: linear-gradient(135deg, var(--color-primary), var(--color-secondary)); display: flex; align-items: center; justify-content: center; font-size: 3rem;">
+                    ${lab.imagenURL ? `<img src="${lab.imagenURL}" alt="${escapeHtml(lab.nombre)}" style="width: 100%; height: 100%; object-fit: cover;">` : (lab.icono || getIconoCategoria(lab.categoria))}
+                </div>
                 <div class="lab-card-content">
-                    <span class="lab-card-category">${getIconoCategoria(lab.categoria)} ${lab.categoria}</span>
-                    <h3 class="lab-card-title">${lab.nombre}</h3>
-                    <p class="lab-card-author">👨‍🏫 ${lab.autor}</p>
-                    <p class="lab-card-description" style="color: var(--color-gray); font-size: var(--text-sm); margin-bottom: var(--space-sm);">${lab.descripcion?.substring(0, 100) || 'Sin descripción'}...</p>
+                    <span class="lab-card-category">${getIconoCategoria(lab.categoria)} ${getNombreCategoria(lab.categoria)}</span>
+                    <h3 class="lab-card-title">${escapeHtml(lab.nombre)}</h3>
+                    <p class="lab-card-author">👨‍🏫 ${escapeHtml(lab.autor)}</p>
+                    <p class="lab-card-description">${escapeHtml(lab.descripcion?.substring(0, 100) || 'Sin descripción')}${lab.descripcion?.length > 100 ? '...' : ''}</p>
                     <div class="lab-card-stats">
                         <span>📥 ${lab.descargas || 0}</span>
                         <span>👁️ ${lab.vistas || 0}</span>
-                        <span>📅 ${lab.fecha}</span>
+                        <span>📅 ${lab.fecha ? new Date(lab.fecha).toLocaleDateString('es-PE') : 'Reciente'}</span>
                     </div>
                     <div style="margin-top: var(--space-md);">
-                        <button class="btn-descargar" data-archivo="${lab.archivo}" style="background: var(--color-primary); border: none; padding: 0.5rem 1rem; border-radius: var(--radius-md); color: white; cursor: pointer;">📥 Descargar</button>
-                        <button class="btn-ver" data-id="${lab.id}" style="background: transparent; border: 1px solid var(--color-primary); padding: 0.5rem 1rem; border-radius: var(--radius-md); color: var(--color-primary); cursor: pointer; margin-left: var(--space-sm);">👁️ Ver detalle</button>
+                        <button class="btn-ver" data-id="${lab.id}" style="background: transparent; border: 1px solid var(--color-primary); padding: 0.5rem 1rem; border-radius: var(--radius-md); color: var(--color-primary); cursor: pointer;">
+                            👁️ Ver detalle
+                        </button>
                     </div>
                 </div>
             </div>
         `).join('');
         
-        // Actualizar contador de resultados
-        const resultsCount = document.getElementById('resultsCount');
-        if (resultsCount) resultsCount.textContent = recientes.length;
+        document.querySelectorAll('#homeLabsGrid .lab-card').forEach(card => {
+            card.addEventListener('click', (e) => {
+                if (e.target.classList.contains('btn-ver')) return;
+                const id = card.getAttribute('data-id');
+                if (id && typeof window.cambiarPagina === 'function') {
+                    window.cambiarPagina('detalle', { id: id });
+                }
+            });
+        });
+        
+        document.querySelectorAll('#homeLabsGrid .btn-ver').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                const id = btn.getAttribute('data-id');
+                if (typeof window.cambiarPagina === 'function') {
+                    window.cambiarPagina('detalle', { id: id });
+                }
+            });
+        });
     }
     
-    // Actualizar laboratorios destacados (carrusel)
-    function actualizarLaboratoriosDestacados(laboratorios) {
-        const track = document.getElementById('carouselTrack');
-        const indicators = document.getElementById('carouselIndicators');
+    // ============================================
+    // RENDERIZAR LABORATORIOS DESTACADOS (CARRUSEL)
+    // ============================================
+    async function renderizarLaboratoriosDestacados() {
+        const track = document.getElementById('homeCarouselTrack');
+        const indicators = document.getElementById('homeCarouselIndicators');
         if (!track || !indicators) return;
         
-        // Tomar los más descargados como destacados
-        const destacados = [...laboratorios].sort((a, b) => (b.descargas || 0) - (a.descargas || 0)).slice(0, 5);
+        const destacados = [...todosLosLaboratorios]
+            .sort((a, b) => (b.descargas || 0) - (a.descargas || 0))
+            .slice(0, 6);
+        
+        if (destacados.length === 0) {
+            track.innerHTML = `
+                <div style="text-align: center; width: 100%; padding: var(--space-3xl);">
+                    <span style="font-size: 3rem;">⭐</span>
+                    <h3>No hay laboratorios destacados</h3>
+                </div>
+            `;
+            return;
+        }
         
         const getIconoCategoria = (cat) => {
             const icons = { redes: '🌐', programacion: '💻', 'bases-datos': '🗄️', inteligencia: '🧠', seguridad: '🔒' };
             return icons[cat] || '📚';
         };
         
+        const getNombreCategoria = (cat) => {
+            const nombres = { redes: 'Redes', programacion: 'Programación', 'bases-datos': 'Bases de Datos', inteligencia: 'IA', seguridad: 'Seguridad' };
+            return nombres[cat] || cat;
+        };
+        
         track.innerHTML = destacados.map(lab => `
-            <div class="carousel-card lab-card">
-                <div class="lab-card-image">⭐ ${lab.icono || getIconoCategoria(lab.categoria)}</div>
+            <div class="carousel-card lab-card" data-id="${lab.id}" style="cursor: pointer; flex: 0 0 350px;">
+                <div class="lab-card-image" style="background: linear-gradient(135deg, var(--color-primary), var(--color-secondary)); display: flex; align-items: center; justify-content: center; font-size: 2rem;">
+                    ⭐ ${lab.icono || getIconoCategoria(lab.categoria)}
+                </div>
                 <div class="lab-card-content">
-                    <span class="lab-card-category">${getIconoCategoria(lab.categoria)} ${lab.categoria}</span>
-                    <h3 class="lab-card-title">${lab.nombre}</h3>
-                    <p class="lab-card-author">👨‍🏫 ${lab.autor}</p>
+                    <span class="lab-card-category">${getIconoCategoria(lab.categoria)} ${getNombreCategoria(lab.categoria)}</span>
+                    <h3 class="lab-card-title">${escapeHtml(lab.nombre)}</h3>
+                    <p class="lab-card-author">👨‍🏫 ${escapeHtml(lab.autor)}</p>
                     <div class="lab-card-stats">
                         <span>📥 ${lab.descargas || 0} descargas</span>
                         <span>👁️ ${lab.vistas || 0} vistas</span>
                     </div>
-                    <div style="margin-top: var(--space-md);">
-                        <button class="btn-descargar" data-archivo="${lab.archivo}" style="background: var(--color-primary); border: none; padding: 0.5rem 1rem; border-radius: var(--radius-md); color: white; cursor: pointer;">📥 Descargar</button>
-                    </div>
                 </div>
             </div>
         `).join('');
         
-        // Crear indicadores del carrusel
+        // Crear indicadores
         indicators.innerHTML = '';
         for (let i = 0; i < destacados.length; i++) {
             const indicator = document.createElement('div');
@@ -381,72 +395,73 @@
                 ind.classList.toggle('active', idx === activeIndex);
             });
         });
-    }
-    
-    // Actualizar estadísticas del hero
-    function actualizarHeroStats(laboratorios) {
-        const totalLabs = laboratorios.length;
-        const categoriasUnicas = [...new Set(laboratorios.map(lab => lab.categoria))];
-        const totalDescargas = laboratorios.reduce((sum, lab) => sum + (lab.descargas || 0), 0);
         
-        const statLabs = document.getElementById('statLabs');
-        const statCategorias = document.getElementById('statCategorias');
-        const statDescargas = document.getElementById('statDescargas');
-        
-        if (statLabs) statLabs.textContent = totalLabs;
-        if (statCategorias) statCategorias.textContent = categoriasUnicas.length;
-        if (statDescargas) statDescargas.textContent = totalDescargas.toLocaleString();
-    }
-    
-    // Configurar eventos de búsqueda y filtros
-    function configurarBuscadorYFiltros() {
-        const searchInput = document.getElementById('searchInput');
-        const categoryFilter = document.getElementById('categoryFilter');
-        
-        if (!searchInput || !categoryFilter) return;
-        
-        function filtrarLaboratorios() {
-            const searchTerm = searchInput.value.toLowerCase();
-            const category = categoryFilter.value;
-            
-            let laboratorios = [];
-            const guardados = localStorage.getItem('axon_laboratorios');
-            if (guardados) {
-                laboratorios = JSON.parse(guardados);
-            } else if (typeof window.datosAxon !== 'undefined' && window.datosAxon.laboratorios) {
-                laboratorios = window.datosAxon.laboratorios;
-            } else {
-                laboratorios = [
-                    { id: 1, nombre: "Introducción a Redes TCP/IP", autor: "Dr. Carlos Martínez", categoria: "redes", descripcion: "Laboratorio básico.", archivo: "lab1.pdf", fecha: "2024-01-15", descargas: 245, vistas: 1250, icono: "🌐" },
-                    { id: 2, nombre: "Programación en Python", autor: "Ing. Ana Rodríguez", categoria: "programacion", descripcion: "Laboratorio práctico.", archivo: "lab2.zip", fecha: "2024-01-20", descargas: 189, vistas: 890, icono: "🐍" }
-                ];
-            }
-            
-            const filtrados = laboratorios.filter(lab => {
-                const matchesSearch = lab.nombre.toLowerCase().includes(searchTerm) || 
-                                     lab.autor.toLowerCase().includes(searchTerm);
-                const matchesCategory = category === 'todas' || lab.categoria === category;
-                return matchesSearch && matchesCategory;
+        // Click en tarjeta
+        track.querySelectorAll('.carousel-card').forEach(card => {
+            card.addEventListener('click', () => {
+                const id = card.getAttribute('data-id');
+                if (typeof window.cambiarPagina === 'function') {
+                    window.cambiarPagina('detalle', { id: id });
+                }
             });
-            
-            actualizarLaboratoriosRecientes(filtrados);
-        }
-        
-        searchInput.addEventListener('input', filtrarLaboratorios);
-        categoryFilter.addEventListener('change', filtrarLaboratorios);
+        });
     }
     
-    // Inicializar todo cuando el DOM esté listo
-    document.addEventListener('DOMContentLoaded', function() {
-        cargarInicio();
-        configurarBuscadorYFiltros();
+    // ============================================
+    // FILTRAR EN TIEMPO REAL
+    // ============================================
+    function filtrarEnTiempoReal() {
+        const searchTerm = document.getElementById('homeSearchInput')?.value || '';
+        const categoria = document.getElementById('homeCategoryFilter')?.value || 'todas';
+        const filtrados = window.filtrarLaboratorios(todosLosLaboratorios, searchTerm, categoria);
+        renderizarLaboratoriosRecientes(filtrados);
+    }
+    
+    // ============================================
+    // ESCAPE HTML (SEGURIDAD)
+    // ============================================
+    function escapeHtml(text) {
+        if (!text) return '';
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
+    }
+    
+    // ============================================
+    // EVENTOS DE BÚSQUEDA
+    // ============================================
+    const homeSearchInput = document.getElementById('homeSearchInput');
+    const homeCategoryFilter = document.getElementById('homeCategoryFilter');
+    
+    if (homeSearchInput) {
+        homeSearchInput.addEventListener('input', () => {
+            if (searchTimeout) clearTimeout(searchTimeout);
+            searchTimeout = setTimeout(filtrarEnTiempoReal, 300);
+        });
+    }
+    
+    if (homeCategoryFilter) {
+        homeCategoryFilter.addEventListener('change', filtrarEnTiempoReal);
+    }
+    
+    // ============================================
+    // ACTUALIZAR UI SEGÚN LOGIN
+    // ============================================
+    function actualizarBotonSubir() {
+        const heroSubirBtn = document.getElementById('heroSubirBtn');
+        const user = firebaseAuth.currentUser;
+        if (heroSubirBtn) {
+            heroSubirBtn.style.display = user ? 'inline-flex' : 'none';
+        }
+    }
+    
+    firebaseAuth.onAuthStateChanged(() => {
+        actualizarBotonSubir();
     });
     
-    // También ejecutar inmediatamente si el DOM ya está cargado
-    if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', () => {});
-    } else {
-        cargarInicio();
-        configurarBuscadorYFiltros();
-    }
+    // Inicializar
+    cargarDatosIniciales();
+    actualizarBotonSubir();
+    
+})();
 </script>
