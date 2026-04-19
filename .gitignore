@@ -73,7 +73,7 @@ database/
 
 # Documentación local
 *.pdf
-*.docx (excepto README.md)
+*.docx
 
 # OS generated files
 .DS_Store
@@ -83,3 +83,9 @@ database/
 .Trashes
 ehthumbs.db
 *.Trash
+
+# Archivos de prueba
+test/
+tests/
+*.test.js
+*.spec.js
