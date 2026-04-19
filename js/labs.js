@@ -1,6 +1,6 @@
 /**
  * AXON - LABS.JS
- * CRUD de laboratorios con Firestore REAL
+ * CRUD de laboratorios con Firebase Storage y Firestore
  */
 
 const COLLECTION_LABS = 'laboratorios';
@@ -12,11 +12,15 @@ async function obtenerLaboratorios(filtros = {}) {
     try {
         let query = firebaseDB.collection(COLLECTION_LABS);
         
+        // Aplicar filtro de categoría
         if (filtros.categoria && filtros.categoria !== 'todas') {
             query = query.where('categoria', '==', filtros.categoria);
         }
         
-        const snapshot = await query.orderBy('fecha', 'desc').get();
+        // Ordenar por fecha (más reciente primero)
+        query = query.orderBy('fecha', 'desc');
+        
+        const snapshot = await query.get();
         
         const laboratorios = [];
         snapshot.forEach(doc => {
@@ -26,10 +30,10 @@ async function obtenerLaboratorios(filtros = {}) {
             });
         });
         
-        // Búsqueda en memoria
-        if (filtros.search) {
-            const searchTerm = filtros.search.toLowerCase();
-            return laboratorios.filter(lab => 
+        // Aplicar filtro de búsqueda (en memoria - Firestore no soporta búsqueda nativa)
+        if (filtros.search && filtros.search.trim()) {
+            const searchTerm = filtros.search.toLowerCase().trim();
+            return laboratorios.filter(lab =>
                 lab.nombre.toLowerCase().includes(searchTerm) ||
                 lab.autor.toLowerCase().includes(searchTerm)
             );
@@ -38,58 +42,90 @@ async function obtenerLaboratorios(filtros = {}) {
         return laboratorios;
         
     } catch (error) {
-        console.error('❌ Error:', error);
+        console.error('❌ Error al obtener laboratorios:', error);
+        if (typeof window.mostrarNotificacion === 'function') {
+            window.mostrarNotificacion('Error al cargar los laboratorios', 'error');
+        }
         return [];
     }
 }
 
 // ============================================
-// OBTENER LABORATORIO POR ID
+// OBTENER LABORATORIO POR ID (STRING)
 // ============================================
 async function obtenerLaboratorioPorId(id) {
+    if (!id) return null;
+    
     try {
         const doc = await firebaseDB.collection(COLLECTION_LABS).doc(id).get();
         
-        if (doc.exists) {
-            incrementarVistas(id);
-            return { id: doc.id, ...doc.data() };
-        }
-        return null;
+        if (!doc.exists) return null;
+        
+        const laboratorio = {
+            id: doc.id,
+            ...doc.data()
+        };
+        
+        // Incrementar vistas en segundo plano (no esperar)
+        incrementarVistas(id).catch(console.error);
+        
+        return laboratorio;
         
     } catch (error) {
-        console.error('❌ Error:', error);
+        console.error('❌ Error al obtener laboratorio:', error);
         return null;
     }
 }
 
 // ============================================
-// SUBIR LABORATORIO CON ARCHIVO REAL
+// AGREGAR LABORATORIO CON SUBIDA REAL DE ARCHIVOS
 // ============================================
-async function agregarLaboratorio(labData, archivoFile) {
+async function agregarLaboratorio(labData, archivoFile, imagenFile = null) {
     const user = firebaseAuth.currentUser;
     
     if (!user) {
-        mostrarNotificacion('Debes iniciar sesión', 'error');
-        return { success: false, message: 'Debes iniciar sesión' };
+        return { success: false, message: 'Debes iniciar sesión para subir laboratorios' };
     }
     
     try {
         let archivoURL = '';
         let archivoNombre = '';
+        let imagenURL = '';
+        let imagenNombre = '';
         
-        // SUBIR ARCHIVO A STORAGE REAL
+        // Subir archivo principal (PDF, ZIP, etc.)
         if (archivoFile && archivoFile instanceof File) {
-            const fileName = `laboratorios/${Date.now()}_${user.uid}_${archivoFile.name}`;
+            const fileExt = archivoFile.name.split('.').pop();
+            const fileName = `laboratorios/${Date.now()}_${user.uid}_archivo.${fileExt}`;
             const storageRef = firebaseStorage.ref(fileName);
             
-            // Mostrar progreso de subida
-            console.log('📤 Subiendo archivo:', archivoFile.name);
-            
-            const uploadTask = await storageRef.put(archivoFile);
-            archivoURL = await uploadTask.ref.getDownloadURL();
+            // Mostrar progreso si hay callback
+            if (labData.onProgress) {
+                const uploadTask = storageRef.put(archivoFile);
+                uploadTask.on('state_changed',
+                    (snapshot) => {
+                        const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
+                        if (labData.onProgress) labData.onProgress(progress);
+                    },
+                    (error) => { throw error; }
+                );
+                await uploadTask;
+                archivoURL = await uploadTask.ref.getDownloadURL();
+            } else {
+                await storageRef.put(archivoFile);
+                archivoURL = await storageRef.getDownloadURL();
+            }
             archivoNombre = archivoFile.name;
-            
-            console.log('✅ Archivo subido:', archivoURL);
+        }
+        
+        // Subir imagen de portada (opcional)
+        if (imagenFile && imagenFile instanceof File) {
+            const imgExt = imagenFile.name.split('.').pop();
+            const imgName = `laboratorios/${Date.now()}_${user.uid}_portada.${imgExt}`;
+            const imgRef = firebaseStorage.ref(imgName);
+            await imgRef.put(imagenFile);
+            imagenURL = await imgRef.getDownloadURL();
+            imagenNombre = imagenFile.name;
         }
         
         // Procesar módulos
@@ -106,6 +142,8 @@ async function agregarLaboratorio(labData, archivoFile) {
             descripcion: labData.descripcion || '',
             archivoURL: archivoURL,
             archivoNombre: archivoNombre,
+            imagenURL: imagenURL,
+            imagenNombre: imagenNombre,
             fecha: new Date().toISOString(),
             descargas: 0,
             vistas: 0,
@@ -118,8 +156,9 @@ async function agregarLaboratorio(labData, archivoFile) {
         
         const docRef = await firebaseDB.collection(COLLECTION_LABS).add(nuevoLab);
         
-        mostrarNotificacion('✅ Laboratorio subido exitosamente', 'success');
-        console.log('✅ Laboratorio guardado en Firestore:', docRef.id);
+        if (typeof window.mostrarNotificacion === 'function') {
+            window.mostrarNotificacion('✅ Laboratorio subido exitosamente', 'success');
+        }
         
         return {
             success: true,
@@ -128,8 +167,10 @@ async function agregarLaboratorio(labData, archivoFile) {
         };
         
     } catch (error) {
-        console.error('❌ Error detallado:', error);
-        mostrarNotificacion('❌ Error: ' + error.message, 'error');
+        console.error('❌ Error al agregar laboratorio:', error);
+        if (typeof window.mostrarNotificacion === 'function') {
+            window.mostrarNotificacion('❌ Error al subir: ' + error.message, 'error');
+        }
         return {
             success: false,
             message: error.message
@@ -138,28 +179,20 @@ async function agregarLaboratorio(labData, archivoFile) {
 }
 
 // ============================================
-// INCREMENTAR DESCARGAS
+// ACTUALIZAR LABORATORIO
 // ============================================
-async function incrementarDescargas(id) {
+async function actualizarLaboratorio(id, data) {
     try {
         await firebaseDB.collection(COLLECTION_LABS).doc(id).update({
-            descargas: firebase.firestore.FieldValue.increment(1)
+            ...data,
+            updatedAt: firebase.firestore.FieldValue.serverTimestamp()
         });
+        
+        return { success: true, message: 'Laboratorio actualizado' };
+        
     } catch (error) {
-        console.error('Error:', error);
-    }
-}
-
-// ============================================
-// INCREMENTAR VISTAS
-// ============================================
-async function incrementarVistas(id) {
-    try {
-        await firebaseDB.collection(COLLECTION_LABS).doc(id).update({
-            vistas: firebase.firestore.FieldValue.increment(1)
-        });
-    } catch (error) {
-        console.error('Error:', error);
+        console.error('❌ Error al actualizar:', error);
+        return { success: false, message: error.message };
     }
 }
 
@@ -178,25 +211,85 @@ async function eliminarLaboratorio(id) {
             return { success: false, message: 'Laboratorio no encontrado' };
         }
         
+        // Verificar permiso (solo el creador o admin puede eliminar)
+        const userDoc = await firebaseDB.collection('usuarios').doc(user.uid).get();
+        const esAdmin = userDoc.exists && userDoc.data().rol === 'admin';
+        
+        if (lab.usuarioId !== user.uid && !esAdmin) {
+            return { success: false, message: 'No tienes permiso para eliminar este laboratorio' };
+        }
+        
         // Eliminar archivo de Storage
         if (lab.archivoURL) {
             try {
-                const storageRef = firebaseStorage.refFromURL(lab.archivoURL);
-                await storageRef.delete();
+                const fileRef = firebaseStorage.refFromURL(lab.archivoURL);
+                await fileRef.delete();
             } catch (e) {
                 console.warn('No se pudo eliminar archivo:', e);
             }
         }
         
-        // Eliminar de Firestore
+        // Eliminar imagen de portada de Storage
+        if (lab.imagenURL) {
+            try {
+                const imgRef = firebaseStorage.refFromURL(lab.imagenURL);
+                await imgRef.delete();
+            } catch (e) {
+                console.warn('No se pudo eliminar imagen:', e);
+            }
+        }
+        
+        // Eliminar documento de Firestore
         await firebaseDB.collection(COLLECTION_LABS).doc(id).delete();
         
-        mostrarNotificacion('✅ Laboratorio eliminado', 'success');
+        // Eliminar progresos asociados
+        const progresosSnapshot = await firebaseDB.collection('progreso')
+            .where('labId', '==', id)
+            .get();
+        
+        const batch = firebaseDB.batch();
+        progresosSnapshot.forEach(doc => {
+            batch.delete(doc.ref);
+        });
+        await batch.commit();
+        
+        if (typeof window.mostrarNotificacion === 'function') {
+            window.mostrarNotificacion('✅ Laboratorio eliminado', 'success');
+        }
+        
         return { success: true, message: 'Laboratorio eliminado' };
         
     } catch (error) {
-        console.error('Error:', error);
+        console.error('❌ Error al eliminar:', error);
         return { success: false, message: error.message };
+    }
+}
+
+// ============================================
+// INCREMENTAR CONTADOR DE DESCARGAS
+// ============================================
+async function incrementarDescargas(id) {
+    try {
+        const labRef = firebaseDB.collection(COLLECTION_LABS).doc(id);
+        await labRef.update({
+            descargas: firebase.firestore.FieldValue.increment(1)
+        });
+    } catch (error) {
+        console.error('❌ Error al incrementar descargas:', error);
+    }
+}
+
+// ============================================
+// INCREMENTAR CONTADOR DE VISTAS
+// ============================================
+async function incrementarVistas(id) {
+    try {
+        const labRef = firebaseDB.collection(COLLECTION_LABS).doc(id);
+        await labRef.update({
+            vistas: firebase.firestore.FieldValue.increment(1)
+        });
+    } catch (error) {
+        console.error('❌ Error al incrementar vistas:', error);
     }
 }
 
@@ -204,6 +297,21 @@ async function eliminarLaboratorio(id) {
 // OBTENER CATEGORÍAS
 // ============================================
 async function obtenerCategorias() {
+    try {
+        // Intentar obtener de Firestore primero
+        const snapshot = await firebaseDB.collection('categorias').get();
+        if (!snapshot.empty) {
+            const categorias = [];
+            snapshot.forEach(doc => {
+                categorias.push({ id: doc.id, ...doc.data() });
+            });
+            return categorias;
+        }
+    } catch (error) {
+        console.log('Usando categorías por defecto');
+    }
+    
+    // Categorías por defecto
     return [
         { id: "redes", nombre: "Redes", icono: "🌐", color: "#00d4ff" },
         { id: "programacion", nombre: "Programación", icono: "💻", color: "#00ff88" },
@@ -213,6 +321,9 @@ async function obtenerCategorias() {
     ];
 }
 
+// ============================================
+// OBTENER ICONO POR CATEGORÍA
+// ============================================
 function obtenerIconoCategoria(categoria) {
     const iconos = {
         'redes': '🌐',
@@ -224,6 +335,9 @@ function obtenerIconoCategoria(categoria) {
     return iconos[categoria] || '📚';
 }
 
+// ============================================
+// OBTENER NOMBRE DE CATEGORÍA
+// ============================================
 function obtenerNombreCategoria(categoria) {
     const nombres = {
         'redes': 'Redes',
@@ -235,14 +349,18 @@ function obtenerNombreCategoria(categoria) {
     return nombres[categoria] || categoria;
 }
 
+// ============================================
+// FILTRAR LABORATORIOS (CLIENTE)
+// ============================================
 function filtrarLaboratorios(laboratorios, searchTerm, categoria) {
     let resultados = [...laboratorios];
     
-    if (searchTerm) {
-        const term = searchTerm.toLowerCase();
+    if (searchTerm && searchTerm.trim()) {
+        const term = searchTerm.toLowerCase().trim();
         resultados = resultados.filter(lab =>
             lab.nombre.toLowerCase().includes(term) ||
-            lab.autor.toLowerCase().includes(term)
+            lab.autor.toLowerCase().includes(term) ||
+            (lab.descripcion && lab.descripcion.toLowerCase().includes(term))
         );
     }
     
@@ -253,30 +371,41 @@ function filtrarLaboratorios(laboratorios, searchTerm, categoria) {
     return resultados;
 }
 
-// Funciones helper
-function mostrarNotificacion(mensaje, tipo) {
-    const notificacion = document.createElement('div');
-    notificacion.className = `alert alert-${tipo}`;
-    notificacion.textContent = mensaje;
-    notificacion.style.cssText = `
-        position: fixed;
-        bottom: 20px;
-        right: 20px;
-        z-index: 1000;
-        max-width: 300px;
-        animation: slideInRight 0.3s ease;
-    `;
-    document.body.appendChild(notificacion);
-    setTimeout(() => notificacion.remove(), 3000);
+// ============================================
+// OBTENER LABORATORIOS RECIENTES
+// ============================================
+async function obtenerLaboratoriosRecientes(limit = 6) {
+    try {
+        const snapshot = await firebaseDB.collection(COLLECTION_LABS)
+            .orderBy('fecha', 'desc')
+            .limit(limit)
+            .get();
+        
+        const laboratorios = [];
+        snapshot.forEach(doc => {
+            laboratorios.push({ id: doc.id, ...doc.data() });
+        });
+        
+        return laboratorios;
+        
+    } catch (error) {
+        console.error('❌ Error:', error);
+        return [];
+    }
 }
 
-// Exportar
+// ============================================
+// EXPORTAR FUNCIONES GLOBALES
+// ============================================
 window.obtenerLaboratorios = obtenerLaboratorios;
 window.obtenerLaboratorioPorId = obtenerLaboratorioPorId;
 window.agregarLaboratorio = agregarLaboratorio;
+window.actualizarLaboratorio = actualizarLaboratorio;
 window.eliminarLaboratorio = eliminarLaboratorio;
 window.incrementarDescargas = incrementarDescargas;
+window.incrementarVistas = incrementarVistas;
 window.obtenerCategorias = obtenerCategorias;
 window.obtenerIconoCategoria = obtenerIconoCategoria;
 window.obtenerNombreCategoria = obtenerNombreCategoria;
 window.filtrarLaboratorios = filtrarLaboratorios;
+window.obtenerLaboratoriosRecientes = obtenerLaboratoriosRecientes;
