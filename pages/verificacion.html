@@ -1,16 +1,183 @@
+<!-- ============================================ -->
+<!-- PÁGINA: VERIFICACIÓN OTP (CORREGIDO)         -->
+<!-- Verificación de código enviado por email    -->
+<!-- ============================================ -->
+
 <div class="page fade-in">
     <div class="container" style="max-width: 500px;">
+        
         <div class="page-header" style="text-align: center; margin-bottom: var(--space-xl);">
             <h1>🔐 <span class="highlight">Verificar Cuenta</span></h1>
-            <p style="color: var(--text-muted);">Modo prueba - Verificación automática</p>
+            <p style="color: var(--text-muted);">Ingresa el código de verificación enviado a tu correo</p>
         </div>
-
+        
         <div class="form-container">
-            <div class="alert alert-success" style="text-align: center;">
-                ✅ Tu cuenta ha sido verificada automáticamente.
-                <br><br>
-                <a href="#login" class="btn btn-primary" style="margin-top: var(--space-md);">🔑 Ir a Iniciar Sesión</a>
-            </div>
+            <form id="verificacionForm">
+                <div class="form-group">
+                    <label for="otpCode">Código de verificación (OTP)</label>
+                    <input type="text" id="otpCode" maxlength="6" placeholder="Ingresa el código de 6 dígitos" required autocomplete="off">
+                    <span class="error-message" id="errorOtp">Código inválido</span>
+                </div>
+                
+                <div class="form-actions">
+                    <button type="submit" class="btn btn-primary">✅ Verificar</button>
+                </div>
+            </form>
+            
+            <p style="text-align: center; margin-top: var(--space-lg);">
+                ¿No recibiste el código? 
+                <a href="#" id="reenviarOtp" style="color: var(--color-primary);">Reenviar código</a>
+            </p>
+            
+            <div id="mensaje" style="display: none; margin-top: var(--space-md); padding: var(--space-md); border-radius: var(--radius-md);"></div>
         </div>
     </div>
 </div>
+
+<script>
+(function() {
+    'use strict';
+    
+    let emailVerificacion = null;
+    
+    // ============================================
+    // OBTENER EMAIL DE LA URL
+    // ============================================
+    function obtenerEmailDeURL() {
+        const hash = window.location.hash;
+        const match = hash.match(/[?&]email=([^&]+)/);
+        if (match) return decodeURIComponent(match[1]);
+        
+        const urlParams = new URLSearchParams(window.location.search);
+        return urlParams.get('email');
+    }
+    
+    emailVerificacion = obtenerEmailDeURL();
+    
+    // Si no hay email, intentar obtener del localStorage temporal
+    if (!emailVerificacion) {
+        const tempData = localStorage.getItem('axon_temp_registro');
+        if (tempData) {
+            try {
+                const data = JSON.parse(tempData);
+                emailVerificacion = data.email;
+            } catch(e) {}
+        }
+    }
+    
+    if (!emailVerificacion) {
+        const mensajeDiv = document.getElementById('mensaje');
+        mensajeDiv.innerHTML = '❌ No se encontró información de verificación. Por favor, regístrate nuevamente.';
+        mensajeDiv.className = 'alert alert-error';
+        mensajeDiv.style.display = 'block';
+        
+        setTimeout(() => {
+            if (typeof window.cambiarPagina === 'function') {
+                window.cambiarPagina('registro');
+            } else {
+                window.location.hash = '#registro';
+            }
+        }, 3000);
+    }
+    
+    // ============================================
+    // VERIFICAR CÓDIGO OTP
+    // ============================================
+    const form = document.getElementById('verificacionForm');
+    const mensajeDiv = document.getElementById('mensaje');
+    
+    form.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        
+        const otp = document.getElementById('otpCode').value.trim();
+        const btn = form.querySelector('button');
+        
+        if (!otp || otp.length !== 6) {
+            document.getElementById('errorOtp').style.display = 'block';
+            return;
+        }
+        
+        document.getElementById('errorOtp').style.display = 'none';
+        
+        btn.disabled = true;
+        btn.textContent = '⏳ Verificando...';
+        mensajeDiv.style.display = 'none';
+        
+        try {
+            const result = await window.verificarOTP(emailVerificacion, otp);
+            
+            mensajeDiv.style.display = 'block';
+            
+            if (result.success) {
+                mensajeDiv.innerHTML = '✅ ' + result.message;
+                mensajeDiv.className = 'alert alert-success';
+                
+                // Limpiar datos temporales
+                localStorage.removeItem('axon_temp_registro');
+                
+                setTimeout(() => {
+                    if (typeof window.cambiarPagina === 'function') {
+                        window.cambiarPagina('login');
+                    } else {
+                        window.location.hash = '#login';
+                    }
+                }, 2000);
+            } else {
+                mensajeDiv.innerHTML = '❌ ' + result.message;
+                mensajeDiv.className = 'alert alert-error';
+                btn.disabled = false;
+                btn.textContent = '✅ Verificar';
+            }
+            
+        } catch (error) {
+            console.error('Error en verificación:', error);
+            mensajeDiv.innerHTML = '❌ Error al verificar el código. Intenta nuevamente.';
+            mensajeDiv.className = 'alert alert-error';
+            mensajeDiv.style.display = 'block';
+            btn.disabled = false;
+            btn.textContent = '✅ Verificar';
+        }
+    });
+    
+    // ============================================
+    // REENVIAR CÓDIGO OTP
+    // ============================================
+    document.getElementById('reenviarOtp').addEventListener('click', async (e) => {
+        e.preventDefault();
+        
+        const btn = e.target;
+        const originalText = btn.textContent;
+        btn.textContent = '⏳ Enviando...';
+        btn.style.pointerEvents = 'none';
+        mensajeDiv.style.display = 'none';
+        
+        try {
+            const result = await window.reenviarOTP(emailVerificacion);
+            
+            mensajeDiv.style.display = 'block';
+            
+            if (result.success) {
+                mensajeDiv.innerHTML = '✅ ' + result.message;
+                mensajeDiv.className = 'alert alert-success';
+            } else {
+                mensajeDiv.innerHTML = '❌ ' + result.message;
+                mensajeDiv.className = 'alert alert-error';
+            }
+            
+            setTimeout(() => {
+                mensajeDiv.style.display = 'none';
+            }, 3000);
+            
+        } catch (error) {
+            console.error('Error al reenviar:', error);
+            mensajeDiv.innerHTML = '❌ Error al reenviar el código. Intenta nuevamente.';
+            mensajeDiv.className = 'alert alert-error';
+            mensajeDiv.style.display = 'block';
+        } finally {
+            btn.textContent = originalText;
+            btn.style.pointerEvents = 'auto';
+        }
+    });
+    
+})();
+</script>
