@@ -1,126 +1,163 @@
 /**
  * AXON - ROUTER.JS
- * Sistema de navegación SPA con hash routing
+ * Sistema de navegación SPA (Single Page Application)
+ * Corregido: evita duplicación de scripts
  */
 
-// Variables del router
-let currentPage = 'inicio';
-let currentParams = {};
-let pageHistory = [];
-let pageCache = {};
-
-// Configuración de rutas
-const routes = {
-    'inicio': { title: 'Inicio', icon: '🏠' },
-    'laboratorios': { title: 'Laboratorios', icon: '📚' },
-    'detalle': { title: 'Detalle del Laboratorio', icon: '📖' },
-    'subir': { title: 'Subir Laboratorio', icon: '📤' },
-    'categorias': { title: 'Categorías', icon: '🏷️' },
-    'registro': { title: 'Registrarse', icon: '📝' },
-    'login': { title: 'Iniciar Sesión', icon: '🔑' },
-    'verificacion': { title: 'Verificar Cuenta', icon: '✅' }
+// ============================================
+// CONFIGURACIÓN DE RUTAS
+// ============================================
+const routesConfig = {
+    'inicio': { title: 'Inicio', protegida: false },
+    'laboratorios': { title: 'Laboratorios', protegida: false },
+    'detalle': { title: 'Detalle del Laboratorio', protegida: false },
+    'subir': { title: 'Subir Laboratorio', protegida: true },
+    'categorias': { title: 'Categorías', protegida: false },
+    'registro': { title: 'Registrarse', protegida: false },
+    'login': { title: 'Iniciar Sesión', protegida: false },
+    'verificacion': { title: 'Verificar Cuenta', protegida: false }
 };
 
-/**
- * Carga una página dinámicamente
- * @param {string} page - Nombre de la página a cargar
- * @param {object} params - Parámetros de la página
- */
+// ============================================
+// VARIABLES DE ESTADO
+// ============================================
+let currentPage = 'inicio';
+let currentParams = {};
+let scriptCache = new Map();
+
+// ============================================
+// FUNCIÓN PRINCIPAL PARA CARGAR PÁGINAS
+// ============================================
 async function cargarPagina(page, params = {}) {
     const contentDiv = document.getElementById('page-content');
     if (!contentDiv) return;
     
-    // Mostrar loader
-    contentDiv.innerHTML = `
-        <div class="loader" style="min-height: 400px;">
-            <div class="loader-spinner"></div>
-            <p style="margin-top: var(--space-4); color: var(--text-muted);">Cargando ${routes[page]?.title || page}...</p>
-        </div>
-    `;
+    // Validar página protegida
+    if (routesConfig[page]?.protegida && !firebaseAuth.currentUser) {
+        mostrarAlertaNoAutenticado();
+        page = 'login';
+        params = {};
+    }
     
     // Guardar estado actual
     currentPage = page;
     currentParams = params;
     
-    // Agregar al historial
-    pageHistory.push({ page, params, timestamp: Date.now() });
-    if (pageHistory.length > 50) pageHistory.shift();
+    // Mostrar loader
+    contentDiv.innerHTML = `
+        <div class="loader-container" style="display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 400px;">
+            <div class="loader-spinner"></div>
+            <p style="margin-top: var(--space-4); color: var(--text-muted);">Cargando ${routesConfig[page]?.title || page}...</p>
+        </div>
+    `;
     
-    // Actualizar título de la página
-    actualizarTituloPagina(page, params);
-    
-    // Verificar caché
-    const cacheKey = `${page}_${JSON.stringify(params)}`;
-    if (pageCache[cacheKey]) {
-        console.log('📦 Cargando desde caché:', cacheKey);
-        contentDiv.innerHTML = pageCache[cacheKey];
-        ejecutarScriptsPagina(contentDiv);
-        actualizarNavActiva(page);
-        dispararEventoPageLoaded(page, params);
-        return;
-    }
+    // Actualizar título
+    document.title = `AXON | ${routesConfig[page]?.title || page}`;
     
     try {
         const response = await fetch(`pages/${page}.html`);
-        if (!response.ok) {
-            throw new Error(`HTTP ${response.status} - ${response.statusText}`);
-        }
+        if (!response.ok) throw new Error(`HTTP ${response.status} - ${response.statusText}`);
         
         let html = await response.text();
         
-        // Guardar en caché
-        pageCache[cacheKey] = html;
-        contentDiv.innerHTML = html;
-        ejecutarScriptsPagina(contentDiv);
-        actualizarNavActiva(page);
-        dispararEventoPageLoaded(page, params);
+        // Extraer scripts del HTML
+        const { cleanHtml, scripts } = extraerScripts(html);
         
-        console.log('✅ Página cargada:', page);
+        // Insertar HTML limpio
+        contentDiv.innerHTML = cleanHtml;
+        
+        // Ejecutar scripts solo si no están en caché
+        ejecutarScriptsUnicos(scripts);
+        
+        // Actualizar navegación activa
+        actualizarNavActiva(page);
+        
+        // Disparar evento de página cargada
+        document.dispatchEvent(new CustomEvent('pageLoaded', { 
+            detail: { page, params, timestamp: Date.now() } 
+        }));
+        
+        console.log(`✅ Página cargada: ${page}`);
         
     } catch (error) {
         console.error('❌ Error cargando página:', error);
-        mostrarErrorPagina(page, error.message);
+        contentDiv.innerHTML = `
+            <div class="container" style="text-align: center; padding: var(--space-3xl);">
+                <span style="font-size: 4rem;">❌</span>
+                <h2 style="margin-top: var(--space-4);">Error al cargar la página</h2>
+                <p style="color: var(--text-muted); margin-top: var(--space-4);">
+                    No se pudo cargar ${page}.html<br>
+                    <small>${error.message}</small>
+                </p>
+                <div style="margin-top: var(--space-lg);">
+                    <button onclick="window.cambiarPagina('inicio')" class="btn btn-primary">🏠 Ir al inicio</button>
+                    <button onclick="location.reload()" class="btn btn-outline" style="margin-left: var(--space-3);">🔄 Recargar</button>
+                </div>
+            </div>
+        `;
     }
 }
 
-/**
- * Ejecuta los scripts de una página cargada dinámicamente
- */
-function ejecutarScriptsPagina(container) {
-    const scripts = container.querySelectorAll('script');
-    scripts.forEach(oldScript => {
-        const newScript = document.createElement('script');
-        if (oldScript.src) {
-            newScript.src = oldScript.src;
-        } else {
-            newScript.textContent = oldScript.textContent;
+// ============================================
+// EXTRAER SCRIPTS DEL HTML
+// ============================================
+function extraerScripts(html) {
+    const tempDiv = document.createElement('div');
+    tempDiv.innerHTML = html;
+    
+    const scripts = [];
+    const scriptElements = tempDiv.querySelectorAll('script');
+    
+    scriptElements.forEach(script => {
+        const scriptContent = script.textContent;
+        const scriptSrc = script.src;
+        
+        if (scriptContent && scriptContent.trim()) {
+            scripts.push({ type: 'inline', content: scriptContent });
+        } else if (scriptSrc) {
+            scripts.push({ type: 'external', src: scriptSrc });
         }
-        document.body.appendChild(newScript);
-        oldScript.remove();
+        script.remove();
+    });
+    
+    return {
+        cleanHtml: tempDiv.innerHTML,
+        scripts: scripts
+    };
+}
+
+// ============================================
+// EJECUTAR SCRIPTS SIN DUPLICAR
+// ============================================
+function ejecutarScriptsUnicos(scripts) {
+    scripts.forEach(script => {
+        let scriptKey;
+        
+        if (script.type === 'inline') {
+            scriptKey = script.content.substring(0, 200);
+        } else {
+            scriptKey = script.src;
+        }
+        
+        // Verificar si el script ya fue ejecutado
+        if (!scriptCache.has(scriptKey)) {
+            scriptCache.set(scriptKey, true);
+            
+            const newScript = document.createElement('script');
+            if (script.type === 'inline') {
+                newScript.textContent = script.content;
+            } else {
+                newScript.src = script.src;
+                newScript.async = false;
+            }
+            document.body.appendChild(newScript);
+        }
     });
 }
 
-/**
- * Actualiza el título de la página en el navegador
- */
-function actualizarTituloPagina(page, params) {
-    const route = routes[page];
-    let titulo = 'AXON | Laboratorios Académicos';
-    
-    if (route) {
-        titulo = `AXON | ${route.title}`;
-    }
-    
-    if (page === 'detalle' && params.id) {
-        titulo = `AXON | Laboratorio #${params.id}`;
-    }
-    
-    document.title = titulo;
-}
-
-/**
- * Actualiza la clase active en el menú de navegación
- */
+// ============================================
+// ACTUALIZAR CLASE ACTIVE EN EL MENÚ
+// ============================================
 function actualizarNavActiva(page) {
     document.querySelectorAll('.nav-link').forEach(link => {
         link.classList.remove('active');
@@ -130,46 +167,35 @@ function actualizarNavActiva(page) {
     });
 }
 
-/**
- * Dispara un evento personalizado cuando se carga una página
- */
-function dispararEventoPageLoaded(page, params) {
-    const event = new CustomEvent('pageLoaded', {
-        detail: { page, params, timestamp: Date.now() }
-    });
-    document.dispatchEvent(event);
-}
-
-/**
- * Muestra un mensaje de error cuando no se puede cargar una página
- */
-function mostrarErrorPagina(page, errorMessage) {
-    const contentDiv = document.getElementById('page-content');
-    if (!contentDiv) return;
-    
-    contentDiv.innerHTML = `
-        <div class="container" style="text-align: center; padding: var(--space-3xl);">
-            <span style="font-size: 4rem;">❌</span>
-            <h2 style="margin-top: var(--space-4);">Error al cargar la página</h2>
-            <p style="color: var(--text-muted); margin-top: var(--space-4);">
-                No se pudo cargar ${page}.html<br>
-                <small>${errorMessage}</small>
-            </p>
-            <div style="margin-top: var(--space-lg);">
-                <button onclick="location.reload()" class="btn btn-primary">
-                    🔄 Recargar
-                </button>
-                <button onclick="window.cambiarPagina('inicio')" class="btn btn-outline" style="margin-left: var(--space-3);">
-                    🏠 Ir al inicio
-                </button>
-            </div>
+// ============================================
+// MOSTRAR ALERTA DE RUTA PROTEGIDA
+// ============================================
+function mostrarAlertaNoAutenticado() {
+    const notificacion = document.createElement('div');
+    notificacion.className = 'alert alert-warning';
+    notificacion.innerHTML = `
+        <div style="display: flex; align-items: center; gap: 10px;">
+            <span>🔒</span>
+            <span>Debes iniciar sesión para acceder a esta sección</span>
         </div>
     `;
+    notificacion.style.cssText = `
+        position: fixed;
+        bottom: 20px;
+        right: 20px;
+        z-index: 10000;
+        max-width: 350px;
+        animation: slideInRight 0.3s ease;
+        cursor: pointer;
+    `;
+    notificacion.onclick = () => notificacion.remove();
+    document.body.appendChild(notificacion);
+    setTimeout(() => notificacion.remove(), 4000);
 }
 
-/**
- * Maneja los cambios en el hash de la URL
- */
+// ============================================
+// MANEJAR CAMBIOS EN LA URL (HASH ROUTING)
+// ============================================
 function handleRoute() {
     let hash = window.location.hash.slice(1) || 'inicio';
     const [page, queryString] = hash.split('?');
@@ -178,24 +204,17 @@ function handleRoute() {
     if (queryString) {
         queryString.split('&').forEach(param => {
             const [key, value] = param.split('=');
-            if (key && value) {
-                params[key] = decodeURIComponent(value);
-            }
+            if (key && value) params[key] = decodeURIComponent(value);
         });
     }
     
-    // Validar que la página existe en las rutas
-    if (!routes[page] && page !== 'detalle') {
-        console.warn('⚠️ Ruta no encontrada:', page);
-        cargarPagina('inicio', params);
-    } else {
-        cargarPagina(page, params);
-    }
+    const validPage = routesConfig[page] ? page : 'inicio';
+    cargarPagina(validPage, params);
 }
 
-/**
- * Navega a una página específica
- */
+// ============================================
+// NAVEGAR A UNA PÁGINA ESPECÍFICA
+// ============================================
 function navegarA(page, params = {}) {
     const queryString = Object.entries(params)
         .map(([key, value]) => `${key}=${encodeURIComponent(value)}`)
@@ -205,41 +224,23 @@ function navegarA(page, params = {}) {
     window.location.hash = hash;
 }
 
-/**
- * Vuelve a la página anterior en el historial
- */
-function goBack() {
-    if (pageHistory.length > 1) {
-        pageHistory.pop(); // Quitar la actual
-        const previous = pageHistory.pop();
-        if (previous) {
-            navegarA(previous.page, previous.params);
-        } else {
-            navegarA('inicio');
-        }
-    } else {
-        navegarA('inicio');
-    }
+// ============================================
+// LIMPIAR CACHÉ DE SCRIPTS (ÚTIL PARA RECARGA)
+// ============================================
+function limpiarCacheScripts() {
+    scriptCache.clear();
+    console.log('🗑️ Caché de scripts limpiada');
 }
 
-/**
- * Limpia la caché de páginas
- */
-function limpiarCache() {
-    pageCache = {};
-    console.log('🗑️ Caché de páginas limpiada');
-}
-
-// Configurar event listeners
+// ============================================
+// INICIALIZAR ROUTER
+// ============================================
 window.addEventListener('hashchange', handleRoute);
-
-// Exportar funciones globales
 window.cambiarPagina = cargarPagina;
 window.navegarA = navegarA;
-window.goBack = goBack;
-window.limpiarCache = limpiarCache;
+window.limpiarCacheScripts = limpiarCacheScripts;
 
-// Inicializar el router cuando el DOM esté listo
+// Inicializar
 if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', handleRoute);
 } else {
