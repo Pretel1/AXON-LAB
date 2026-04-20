@@ -2,514 +2,89 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AXON - Laboratorios Académicos</title>
-    <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-            font-family: 'Inter', system-ui, -apple-system, sans-serif;
-        }
-        body {
-            background: #f5f7fb;
-            color: #1a1a2e;
-        }
-        .container {
-            max-width: 1200px;
-            margin: 0 auto;
-            padding: 20px;
-        }
-        /* Header */
-        .header {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            padding: 1rem 2rem;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            flex-wrap: wrap;
-            gap: 1rem;
-        }
-        .logo {
-            font-size: 1.8rem;
-            font-weight: bold;
-        }
-        .logo span {
-            font-size: 0.9rem;
-            font-weight: normal;
-            opacity: 0.9;
-        }
-        .nav {
-            display: flex;
-            gap: 1rem;
-            flex-wrap: wrap;
-        }
-        .nav button, .nav a {
-            background: rgba(255,255,255,0.2);
-            border: none;
-            padding: 0.5rem 1rem;
-            border-radius: 8px;
-            color: white;
-            cursor: pointer;
-            font-weight: 500;
-            transition: 0.2s;
-            text-decoration: none;
-        }
-        .nav button:hover, .nav a:hover {
-            background: rgba(255,255,255,0.4);
-        }
-        .user-info {
-            display: flex;
-            align-items: center;
-            gap: 1rem;
-            background: rgba(255,255,255,0.15);
-            padding: 0.3rem 1rem;
-            border-radius: 40px;
-        }
-        /* Tarjetas */
-        .grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-            gap: 1.5rem;
-            margin-top: 2rem;
-        }
-        .card {
-            background: white;
-            border-radius: 16px;
-            padding: 1.2rem;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-            transition: transform 0.2s;
-        }
-        .card:hover {
-            transform: translateY(-4px);
-        }
-        .card h3 {
-            margin-bottom: 0.5rem;
-            color: #333;
-        }
-        .card p {
-            color: #666;
-            font-size: 0.9rem;
-            margin: 0.3rem 0;
-        }
-        .card button {
-            margin-top: 0.8rem;
-            background: #667eea;
-            color: white;
-            border: none;
-            padding: 0.5rem 1rem;
-            border-radius: 8px;
-            cursor: pointer;
-        }
-        /* Formularios */
-        .form-card {
-            background: white;
-            border-radius: 24px;
-            padding: 2rem;
-            max-width: 500px;
-            margin: 2rem auto;
-            box-shadow: 0 8px 24px rgba(0,0,0,0.1);
-        }
-        .form-group {
-            margin-bottom: 1rem;
-        }
-        label {
-            display: block;
-            margin-bottom: 0.3rem;
-            font-weight: 500;
-        }
-        input, select, textarea {
-            width: 100%;
-            padding: 0.7rem;
-            border: 1px solid #ddd;
-            border-radius: 8px;
-            font-size: 1rem;
-        }
-        .btn {
-            background: #667eea;
-            color: white;
-            padding: 0.7rem 1.5rem;
-            border: none;
-            border-radius: 8px;
-            cursor: pointer;
-            font-weight: bold;
-        }
-        .btn-danger {
-            background: #e74c3c;
-        }
-        .search-bar {
-            display: flex;
-            gap: 1rem;
-            margin: 1rem 0;
-            flex-wrap: wrap;
-        }
-        .search-bar input, .search-bar select {
-            flex: 1;
-            min-width: 150px;
-        }
-        .alert {
-            padding: 0.8rem;
-            border-radius: 8px;
-            margin: 1rem 0;
-        }
-        .alert-success {
-            background: #d4edda;
-            color: #155724;
-        }
-        .alert-error {
-            background: #f8d7da;
-            color: #721c24;
-        }
-        .hidden {
-            display: none;
-        }
-        footer {
-            text-align: center;
-            margin-top: 3rem;
-            padding: 1rem;
-            color: #777;
-        }
-        @media (max-width: 768px) {
-            .header {
-                flex-direction: column;
-                text-align: center;
-            }
-            .grid {
-                grid-template-columns: 1fr;
-            }
-        }
-    </style>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <meta name="description" content="AXON - Repositorio de Laboratorios Académicos. Accede, comparte y gestiona laboratorios de todas las áreas del conocimiento.">
+    <meta name="author" content="AXON Team">
+    <meta name="keywords" content="laboratorios, académicos, repositorio, educación, redes, programación, inteligencia artificial">
+    <meta name="theme-color" content="#0a0a0f">
+    
+    <title>AXON | Laboratorios Académicos</title>
+    
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    
+    <!-- CSS Stylesheets -->
+    <link rel="stylesheet" href="css/estilo.css">
+    <link rel="stylesheet" href="css/layout.css">
+    <link rel="stylesheet" href="css/componentes.css">
+    <link rel="stylesheet" href="css/animaciones.css">
+    <link rel="stylesheet" href="css/dark-mode.css">
+    
+    <!-- Firebase SDKs (versión compat) -->
+    <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-storage-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-messaging-compat.js"></script>
+    
+    <!-- EmailJS SDK -->
+    <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
 </head>
 <body>
-    <div class="header">
-        <div class="logo">AXON <span>Laboratorios Académicos</span></div>
-        <div class="nav">
-            <button onclick="mostrarSeccion('inicio')">🏠 Inicio</button>
-            <button onclick="mostrarSeccion('laboratorios')">📚 Laboratorios</button>
-            <button onclick="mostrarSeccion('subir')">📤 Subir</button>
-            <div id="authButtons">
-                <button onclick="mostrarSeccion('registro')">📝 Registrarse</button>
-                <button onclick="mostrarSeccion('login')">🔑 Iniciar Sesión</button>
+    <div class="app-container">
+        <!-- SIDEBAR -->
+        <aside class="sidebar" id="sidebar">
+            <div class="sidebar__header">
+                <div class="sidebar__logo">AXON</div>
+                <div class="sidebar__subtitle">Laboratorios Académicos</div>
             </div>
-            <div id="userPanel" class="hidden">
-                <div class="user-info">
-                    <span id="userNameDisplay"></span>
-                    <button onclick="cerrarSesion()" style="background:#e74c3c">Salir</button>
+            <nav class="sidebar__nav">
+                <a href="#inicio" class="nav-link active" data-page="inicio"><span class="icon">🏠</span><span>Inicio</span></a>
+                <a href="#laboratorios" class="nav-link" data-page="laboratorios"><span class="icon">📚</span><span>Laboratorios</span></a>
+                <a href="#categorias" class="nav-link" data-page="categorias"><span class="icon">🏷️</span><span>Categorías</span></a>
+                <a href="#subir" class="nav-link" data-page="subir" id="subirNavLink" style="display: none;"><span class="icon">📤</span><span>Subir Laboratorio</span></a>
+                <div class="sidebar__divider"></div>
+                <a href="#registro" class="nav-link" data-page="registro" id="registroNavLink"><span class="icon">📝</span><span>Registrarse</span></a>
+                <a href="#login" class="nav-link" data-page="login" id="loginNavLink"><span class="icon">🔑</span><span>Iniciar Sesión</span></a>
+                <a href="#logout" class="nav-link" id="logoutNavLink" style="display: none;"><span class="icon">🚪</span><span>Cerrar Sesión</span></a>
+            </nav>
+        </aside>
+
+        <div class="sidebar-overlay" id="sidebarOverlay"></div>
+
+        <main class="main-content">
+            <header class="main-header">
+                <button class="menu-toggle" id="menuToggle" aria-label="Menú">☰</button>
+                <div class="user-info" id="userInfo">
+                    <span class="user-greeting">Bienvenido, <span id="userName">Invitado</span></span>
+                    <div class="user-avatar" id="userAvatar">👤</div>
                 </div>
+            </header>
+            <div id="page-content" class="page-content">
+                <div class="loader"><div class="loader-spinner"></div></div>
             </div>
-        </div>
+        </main>
     </div>
 
-    <div class="container" id="app">
-        <!-- Sección Inicio -->
-        <div id="seccion-inicio" class="seccion">
-            <h1>📚 Bienvenido a AXON</h1>
-            <p>Repositorio de laboratorios académicos. Comparte, descubre y aprende.</p>
-            <div style="display: flex; gap: 1rem; margin-top: 2rem;">
-                <button class="btn" onclick="mostrarSeccion('laboratorios')">Ver laboratorios</button>
-                <button class="btn" onclick="mostrarSeccion('subir')">Subir laboratorio</button>
-            </div>
-            <div style="margin-top: 2rem;">
-                <h3>📊 Estadísticas</h3>
-                <p>Laboratorios disponibles: <strong id="totalLabs">0</strong></p>
-            </div>
-        </div>
-
-        <!-- Sección Laboratorios (listado, búsqueda, filtros) -->
-        <div id="seccion-laboratorios" class="seccion hidden">
-            <h2>📚 Laboratorios Disponibles</h2>
-            <div class="search-bar">
-                <input type="text" id="searchInput" placeholder="Buscar por nombre..." oninput="filtrarLaboratorios()">
-                <select id="categoriaFilter" onchange="filtrarLaboratorios()">
-                    <option value="">Todas las categorías</option>
-                    <option>Programación</option>
-                    <option>Redes</option>
-                    <option>Bases de Datos</option>
-                    <option>Inteligencia Artificial</option>
-                    <option>Seguridad</option>
-                    <option>Otros</option>
-                </select>
-            </div>
-            <div id="listaLaboratorios" class="grid"></div>
-        </div>
-
-        <!-- Sección Subir laboratorio (solo usuarios logueados) -->
-        <div id="seccion-subir" class="seccion hidden">
-            <div class="form-card">
-                <h2>📤 Subir nuevo laboratorio</h2>
-                <form id="formSubir">
-                    <div class="form-group">
-                        <label>Nombre del laboratorio *</label>
-                        <input type="text" id="labNombre" required>
-                    </div>
-                    <div class="form-group">
-                        <label>Autor(es) *</label>
-                        <input type="text" id="labAutor" required>
-                    </div>
-                    <div class="form-group">
-                        <label>Categoría *</label>
-                        <select id="labCategoria" required>
-                            <option value="">Seleccionar</option>
-                            <option>Programación</option>
-                            <option>Redes</option>
-                            <option>Bases de Datos</option>
-                            <option>Inteligencia Artificial</option>
-                            <option>Seguridad</option>
-                            <option>Otros</option>
-                        </select>
-                    </div>
-                    <div class="form-group">
-                        <label>URL del archivo (o enlace de descarga) *</label>
-                        <input type="url" id="labUrl" placeholder="https://ejemplo.com/archivo.pdf" required>
-                        <small>Puedes usar un enlace de Drive, Dropbox o cualquier URL pública</small>
-                    </div>
-                    <button type="submit" class="btn">Subir laboratorio</button>
-                    <div id="msgSubir" class="hidden"></div>
-                </form>
-            </div>
-        </div>
-
-        <!-- Sección Registro -->
-        <div id="seccion-registro" class="seccion hidden">
-            <div class="form-card">
-                <h2>📝 Registro de usuario</h2>
-                <form id="formRegistro">
-                    <div class="form-group">
-                        <label>Nombre completo *</label>
-                        <input type="text" id="regNombre" required>
-                    </div>
-                    <div class="form-group">
-                        <label>Correo electrónico *</label>
-                        <input type="email" id="regEmail" required>
-                    </div>
-                    <div class="form-group">
-                        <label>Contraseña *</label>
-                        <input type="password" id="regPassword" required minlength="6">
-                    </div>
-                    <button type="submit" class="btn">Registrarse</button>
-                    <div id="msgRegistro" class="hidden"></div>
-                </form>
-                <p style="margin-top: 1rem;">¿Ya tienes cuenta? <a href="#" onclick="mostrarSeccion('login'); return false;">Inicia sesión</a></p>
-            </div>
-        </div>
-
-        <!-- Sección Login -->
-        <div id="seccion-login" class="seccion hidden">
-            <div class="form-card">
-                <h2>🔑 Iniciar sesión</h2>
-                <form id="formLogin">
-                    <div class="form-group">
-                        <label>Correo electrónico *</label>
-                        <input type="email" id="loginEmail" required>
-                    </div>
-                    <div class="form-group">
-                        <label>Contraseña *</label>
-                        <input type="password" id="loginPassword" required>
-                    </div>
-                    <button type="submit" class="btn">Ingresar</button>
-                    <div id="msgLogin" class="hidden"></div>
-                </form>
-                <p style="margin-top: 1rem;">¿No tienes cuenta? <a href="#" onclick="mostrarSeccion('registro'); return false;">Regístrate aquí</a></p>
-            </div>
-        </div>
-    </div>
-    <footer>
-        <p>AXON - Repositorio de Laboratorios Académicos | Proyecto Final</p>
-    </footer>
-
-    <script>
-        // ---------- DATA INICIAL (simulada) ----------
-        let laboratorios = [
-            { id: 1, nombre: "Introducción a Redes", autor: "Dr. Gómez", categoria: "Redes", url: "#" },
-            { id: 2, nombre: "Programación en Java", autor: "Ing. López", categoria: "Programación", url: "#" },
-            { id: 3, nombre: "SQL Avanzado", autor: "Mtra. Ruiz", categoria: "Bases de Datos", url: "#" },
-            { id: 4, nombre: "Machine Learning", autor: "Dr. Martínez", categoria: "Inteligencia Artificial", url: "#" },
-            { id: 5, nombre: "Seguridad en Redes", autor: "Ing. Fernández", categoria: "Seguridad", url: "#" },
-            { id: 6, nombre: "Desarrollo Web con React", autor: "Lic. Torres", categoria: "Programación", url: "#" }
-        ];
-        let usuarios = []; // { email, password, nombre }
-
-        // Cargar datos desde localStorage
-        function cargarDatos() {
-            const labsGuardados = localStorage.getItem('axon_laboratorios');
-            if (labsGuardados) laboratorios = JSON.parse(labsGuardados);
-            const usersGuardados = localStorage.getItem('axon_usuarios');
-            if (usersGuardados) usuarios = JSON.parse(usersGuardados);
-            actualizarEstadisticas();
-            if (document.getElementById('listaLaboratorios')) renderizarLaboratorios();
-        }
-
-        function guardarLaboratorios() {
-            localStorage.setItem('axon_laboratorios', JSON.stringify(laboratorios));
-            actualizarEstadisticas();
-        }
-
-        function guardarUsuarios() {
-            localStorage.setItem('axon_usuarios', JSON.stringify(usuarios));
-        }
-
-        // Renderizar tarjetas
-        function renderizarLaboratorios() {
-            const contenedor = document.getElementById('listaLaboratorios');
-            if (!contenedor) return;
-            const searchTerm = document.getElementById('searchInput')?.value.toLowerCase() || '';
-            const categoriaSel = document.getElementById('categoriaFilter')?.value || '';
-            const filtrados = laboratorios.filter(lab => {
-                const matchNombre = lab.nombre.toLowerCase().includes(searchTerm);
-                const matchCategoria = categoriaSel === '' || lab.categoria === categoriaSel;
-                return matchNombre && matchCategoria;
-            });
-            if (filtrados.length === 0) {
-                contenedor.innerHTML = '<p>No hay laboratorios que coincidan.</p>';
-                return;
-            }
-            contenedor.innerHTML = filtrados.map(lab => `
-                <div class="card">
-                    <h3>${lab.nombre}</h3>
-                    <p><strong>Autor:</strong> ${lab.autor}</p>
-                    <p><strong>Categoría:</strong> ${lab.categoria}</p>
-                    <button onclick="descargarLaboratorio('${lab.url}')">📥 Descargar</button>
-                </div>
-            `).join('');
-        }
-
-        window.descargarLaboratorio = (url) => {
-            if (url && url !== '#') {
-                window.open(url, '_blank');
-            } else {
-                alert("Descarga simulada. Enlace no disponible.");
-            }
-        };
-
-        function filtrarLaboratorios() {
-            renderizarLaboratorios();
-        }
-
-        function actualizarEstadisticas() {
-            const totalSpan = document.getElementById('totalLabs');
-            if (totalSpan) totalSpan.textContent = laboratorios.length;
-        }
-
-        // Subir laboratorio (solo logueados)
-        document.getElementById('formSubir')?.addEventListener('submit', (e) => {
-            e.preventDefault();
-            const usuarioActual = sessionStorage.getItem('axon_usuario_actual');
-            if (!usuarioActual) {
-                alert("Debes iniciar sesión para subir laboratorios.");
-                mostrarSeccion('login');
-                return;
-            }
-            const nombre = document.getElementById('labNombre').value.trim();
-            const autor = document.getElementById('labAutor').value.trim();
-            const categoria = document.getElementById('labCategoria').value;
-            const url = document.getElementById('labUrl').value.trim();
-            if (!nombre || !autor || !categoria || !url) {
-                alert("Completa todos los campos.");
-                return;
-            }
-            const nuevoId = laboratorios.length + 1;
-            laboratorios.push({ id: nuevoId, nombre, autor, categoria, url });
-            guardarLaboratorios();
-            renderizarLaboratorios();
-            document.getElementById('formSubir').reset();
-            const msgDiv = document.getElementById('msgSubir');
-            msgDiv.className = 'alert alert-success';
-            msgDiv.innerHTML = '✅ Laboratorio subido correctamente.';
-            msgDiv.classList.remove('hidden');
-            setTimeout(() => msgDiv.classList.add('hidden'), 3000);
-            mostrarSeccion('laboratorios');
-        });
-
-        // Registro
-        document.getElementById('formRegistro')?.addEventListener('submit', (e) => {
-            e.preventDefault();
-            const nombre = document.getElementById('regNombre').value.trim();
-            const email = document.getElementById('regEmail').value.trim();
-            const password = document.getElementById('regPassword').value;
-            if (usuarios.find(u => u.email === email)) {
-                mostrarMensaje('msgRegistro', 'El correo ya está registrado.', 'error');
-                return;
-            }
-            usuarios.push({ nombre, email, password });
-            guardarUsuarios();
-            mostrarMensaje('msgRegistro', 'Registro exitoso. Ahora inicia sesión.', 'success');
-            setTimeout(() => mostrarSeccion('login'), 1500);
-        });
-
-        // Login
-        document.getElementById('formLogin')?.addEventListener('submit', (e) => {
-            e.preventDefault();
-            const email = document.getElementById('loginEmail').value.trim();
-            const password = document.getElementById('loginPassword').value;
-            const user = usuarios.find(u => u.email === email && u.password === password);
-            if (user) {
-                sessionStorage.setItem('axon_usuario_actual', JSON.stringify(user));
-                actualizarUIUsuario(user.nombre);
-                mostrarMensaje('msgLogin', `Bienvenido ${user.nombre}`, 'success');
-                setTimeout(() => mostrarSeccion('inicio'), 1000);
-            } else {
-                mostrarMensaje('msgLogin', 'Correo o contraseña incorrectos', 'error');
-            }
-        });
-
-        function cerrarSesion() {
-            sessionStorage.removeItem('axon_usuario_actual');
-            actualizarUIUsuario(null);
-            mostrarSeccion('inicio');
-        }
-
-        function actualizarUIUsuario(nombre) {
-            const authDiv = document.getElementById('authButtons');
-            const userPanel = document.getElementById('userPanel');
-            const userNameSpan = document.getElementById('userNameDisplay');
-            if (nombre) {
-                authDiv.classList.add('hidden');
-                userPanel.classList.remove('hidden');
-                userNameSpan.textContent = `👤 ${nombre}`;
-            } else {
-                authDiv.classList.remove('hidden');
-                userPanel.classList.add('hidden');
-            }
-        }
-
-        function mostrarMensaje(elementId, texto, tipo) {
-            const div = document.getElementById(elementId);
-            div.innerHTML = texto;
-            div.className = `alert alert-${tipo}`;
-            div.classList.remove('hidden');
-            setTimeout(() => div.classList.add('hidden'), 3000);
-        }
-
-        // Mostrar secciones (SPA simple)
-        function mostrarSeccion(seccion) {
-            document.querySelectorAll('.seccion').forEach(sec => sec.classList.add('hidden'));
-            const target = document.getElementById(`seccion-${seccion}`);
-            if (target) target.classList.remove('hidden');
-            if (seccion === 'laboratorios') renderizarLaboratorios();
-            if (seccion === 'inicio') actualizarEstadisticas();
-            // Verificar acceso a subir
-            if (seccion === 'subir') {
-                const usuario = sessionStorage.getItem('axon_usuario_actual');
-                if (!usuario) {
-                    alert("Debes iniciar sesión para subir laboratorios.");
-                    mostrarSeccion('login');
-                }
-            }
-        }
-
-        // Inicializar
-        window.onload = () => {
-            cargarDatos();
-            const usuarioActual = sessionStorage.getItem('axon_usuario_actual');
-            if (usuarioActual) {
-                const user = JSON.parse(usuarioActual);
-                actualizarUIUsuario(user.nombre);
-            } else {
-                actualizarUIUsuario(null);
-            }
-            mostrarSeccion('inicio');
-        };
-    </script>
+    <!-- ============================================ -->
+    <!-- SCRIPTS DE LA APLICACIÓN (SIN DUPLICACIÓN)   -->
+    <!-- ============================================ -->
+    <!-- Configuración única de Firebase (define window.firebaseAuth, etc.) -->
+    <script src="js/firebase-config.js"></script>
+    
+    <!-- Utilidades y validaciones -->
+    <script src="js/utils.js"></script>
+    <script src="js/validaciones.js"></script>
+    
+    <!-- Módulos principales -->
+    <script src="js/auth.js"></script>
+    <script src="js/labs.js"></script>
+    <script src="js/progreso.js"></script>
+    <script src="js/buscador.js"></script>
+    
+    <!-- Navegación SPA y FCM -->
+    <script src="js/router.js"></script>
+    <script src="js/fcm.js"></script>
+    <script src="js/app.js"></script>
 </body>
 </html>
