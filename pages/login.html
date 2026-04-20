@@ -12,13 +12,14 @@
     document.getElementById('formLogin').addEventListener('submit', (e) => {
         e.preventDefault();
         const email = document.getElementById('loginEmail').value.trim();
-        const password = document.getElementById('loginPassword').value;
-        const result = window.iniciarSesion(email, password);
+        const pass = document.getElementById('loginPassword').value;
+        const result = window.iniciarSesion(email, pass);
+        const msgDiv = document.getElementById('msgLogin');
         if (result.success) {
-            document.getElementById('msgLogin').innerHTML = `<div class="alert alert-success">${result.message}</div>`;
+            msgDiv.innerHTML = `<div class="alert alert-success">${result.message}</div>`;
             setTimeout(() => window.cambiarPagina('inicio'), 1000);
         } else {
-            document.getElementById('msgLogin').innerHTML = `<div class="alert alert-error">${result.message}</div>`;
+            msgDiv.innerHTML = `<div class="alert alert-error">${result.message}</div>`;
         }
     });
 </script>
