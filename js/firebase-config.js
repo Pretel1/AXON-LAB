@@ -28,9 +28,14 @@ db.enablePersistence({ synchronizeTabs: true })
     console.warn("Persistencia offline:", err.code);
   });
 
-// Global
+// Globales principales
 window.auth = auth;
 window.db = db;
 window.storage = storage;
+
+// ALIAS para compatibilidad con scripts existentes (app.js, auth.js, etc.)
+window.firebaseAuth = auth;
+window.firebaseDB = db;
+window.firebaseStorage = storage;
 
 console.log("🔥 Firebase listo AXON");
