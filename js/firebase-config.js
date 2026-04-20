@@ -16,11 +16,10 @@ const auth = firebase.auth();
 const db = firebase.firestore();
 const storage = firebase.storage();
 
-// Persistencia
 auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL);
 db.enablePersistence({ synchronizeTabs: true }).catch(e => console.warn(e.code));
 
-// Globales necesarias para todos los scripts
+// Variables globales necesarias
 window.auth = auth;
 window.db = db;
 window.storage = storage;
