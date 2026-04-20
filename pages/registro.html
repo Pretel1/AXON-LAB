@@ -4,26 +4,27 @@
         <div class="form-group"><label>Nombre completo</label><input type="text" id="regNombre" required></div>
         <div class="form-group"><label>Correo electrónico</label><input type="email" id="regEmail" required></div>
         <div class="form-group"><label>Contraseña</label><input type="password" id="regPassword" required minlength="6"></div>
-        <div class="form-group"><label>Confirmar contraseña</label><input type="password" id="regConfirmPassword" required></div>
+        <div class="form-group"><label>Confirmar contraseña</label><input type="password" id="regConfirm" required></div>
         <button type="submit" class="btn">Registrarse</button>
         <div id="msgRegistro"></div>
     </form>
-    <p>¿Ya tienes cuenta? <a href="#" onclick="window.cambiarPagina('login'); return false;">Inicia sesión</a></p>
+    <p>¿Ya tienes cuenta? <a href="#" onclick="window.cambiarPagina('login'); return false;">Inicia sesión aquí</a></p>
 </div>
 <script>
     document.getElementById('formRegistro').addEventListener('submit', (e) => {
         e.preventDefault();
         const nombre = document.getElementById('regNombre').value.trim();
         const email = document.getElementById('regEmail').value.trim();
-        const password = document.getElementById('regPassword').value;
-        const confirm = document.getElementById('regConfirmPassword').value;
-        if (password !== confirm) return window.mostrarNotificacion('Las contraseñas no coinciden', 'error');
-        const result = window.registrarUsuario(nombre, email, password);
+        const pass = document.getElementById('regPassword').value;
+        const confirm = document.getElementById('regConfirm').value;
+        if (pass !== confirm) return window.mostrarNotificacion('Las contraseñas no coinciden', 'error');
+        const result = window.registrarUsuario(nombre, email, pass);
+        const msgDiv = document.getElementById('msgRegistro');
         if (result.success) {
-            document.getElementById('msgRegistro').innerHTML = `<div class="alert alert-success">${result.message}</div>`;
+            msgDiv.innerHTML = `<div class="alert alert-success">${result.message}</div>`;
             setTimeout(() => window.cambiarPagina('login'), 1500);
         } else {
-            document.getElementById('msgRegistro').innerHTML = `<div class="alert alert-error">${result.message}</div>`;
+            msgDiv.innerHTML = `<div class="alert alert-error">${result.message}</div>`;
         }
     });
 </script>
