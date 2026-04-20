@@ -1,93 +1,52 @@
 <div class="form-card">
     <h2>📤 Subir nuevo laboratorio</h2>
-    <p>Ingresa los datos del laboratorio y selecciona una imagen de portada (opcional).</p>
+    <p>Ingresa los datos. La <strong>imagen de portada</strong> debe ser una URL pública (ej. de Imgur, Pinterest, etc.)</p>
     <form id="formSubir">
-        <div class="form-group">
-            <label>Nombre del laboratorio *</label>
-            <input type="text" id="labNombre" required>
-        </div>
-        <div class="form-group">
-            <label>Autor(es) *</label>
-            <input type="text" id="labAutor" required>
-        </div>
-        <div class="form-group">
-            <label>Categoría *</label>
+        <div class="form-group"><label>Nombre del laboratorio *</label><input type="text" id="labNombre" required></div>
+        <div class="form-group"><label>Autor(es) *</label><input type="text" id="labAutor" required></div>
+        <div class="form-group"><label>Categoría *</label>
             <select id="labCategoria" required>
                 <option value="">Seleccionar</option>
-                <option>Programación</option>
-                <option>Redes</option>
-                <option>Bases de Datos</option>
-                <option>Inteligencia Artificial</option>
-                <option>Seguridad</option>
-                <option>Otros</option>
+                <option>Programación</option><option>Redes</option><option>Bases de Datos</option>
+                <option>Inteligencia Artificial</option><option>Seguridad</option><option>Otros</option>
             </select>
         </div>
-        <div class="form-group">
-            <label>Enlace de OneDrive (o URL) *</label>
-            <input type="url" id="labUrl" placeholder="https://onedrive.live.com/..." required>
-            <small>Enlace compartido del archivo (los usuarios podrán verlo y descargarlo)</small>
+        <div class="form-group"><label>URL de la imagen de portada</label>
+            <input type="url" id="labImagen" placeholder="https://ejemplo.com/imagen.jpg">
+            <small>Deja vacío para usar imagen por defecto</small>
         </div>
-        <div class="form-group">
-            <label>Imagen de portada (opcional)</label>
-            <input type="file" id="labImagen" accept="image/jpeg, image/png, image/webp">
-            <small>Selecciona una imagen (JPG, PNG, WEBP). Se guardará en Base64.</small>
-            <div id="previewImagen" style="margin-top: 10px;"></div>
+        <div class="form-group"><label>Enlace de OneDrive (archivo) *</label>
+            <input type="url" id="labArchivo" placeholder="https://onedrive.live.com/..." required>
         </div>
         <button type="submit" class="btn">Subir laboratorio</button>
         <div id="msgSubir"></div>
     </form>
 </div>
-
 <script>
-    const form = document.getElementById('formSubir');
-    const inputImagen = document.getElementById('labImagen');
-    const preview = document.getElementById('previewImagen');
-
-    // Vista previa de la imagen seleccionada
-    inputImagen.addEventListener('change', (e) => {
-        const file = e.target.files[0];
-        if (file) {
-            const reader = new FileReader();
-            reader.onload = function(event) {
-                preview.innerHTML = `<img src="${event.target.result}" style="max-width: 100%; max-height: 150px; border-radius: 8px;">`;
-            };
-            reader.readAsDataURL(file);
-        } else {
-            preview.innerHTML = '';
-        }
-    });
-
-    form.addEventListener('submit', async (e) => {
+    document.getElementById('formSubir').addEventListener('submit', (e) => {
         e.preventDefault();
         const nombre = document.getElementById('labNombre').value.trim();
         const autor = document.getElementById('labAutor').value.trim();
         const categoria = document.getElementById('labCategoria').value;
-        let url = document.getElementById('labUrl').value.trim();
-        const imagenFile = document.getElementById('labImagen').files[0];
+        let imagenUrl = document.getElementById('labImagen').value.trim();
+        const archivoUrl = document.getElementById('labArchivo').value.trim();
 
-        if (!nombre || !autor || !categoria || !url) {
+        if (!nombre || !autor || !categoria || !archivoUrl) {
             window.mostrarNotificacion('Completa todos los campos obligatorios', 'error');
             return;
         }
-        if (!url.startsWith('http')) {
+        if (!archivoUrl.startsWith('http')) {
             window.mostrarNotificacion('El enlace debe comenzar con http:// o https://', 'error');
             return;
         }
-
-        let portadaBase64 = "";
-        if (imagenFile) {
-            // Convertir imagen a Base64
-            portadaBase64 = await new Promise((resolve) => {
-                const reader = new FileReader();
-                reader.onload = (e) => resolve(e.target.result);
-                reader.readAsDataURL(imagenFile);
-            });
+        const result = window.agregarLaboratorio(nombre, autor, categoria, imagenUrl, archivoUrl);
+        const msgDiv = document.getElementById('msgSubir');
+        if (result.success) {
+            msgDiv.innerHTML = `<div class="alert alert-success">${result.message}</div>`;
+            document.getElementById('formSubir').reset();
+            setTimeout(() => window.cambiarPagina('laboratorios'), 1500);
+        } else {
+            msgDiv.innerHTML = `<div class="alert alert-error">${result.message}</div>`;
         }
-
-        window.agregarLaboratorio(nombre, autor, categoria, url, portadaBase64);
-        window.mostrarNotificacion('Laboratorio subido correctamente', 'success');
-        form.reset();
-        preview.innerHTML = '';
-        setTimeout(() => window.cambiarPagina('laboratorios'), 1500);
     });
 </script>
