@@ -1,232 +1,163 @@
-/**
- * AXON - Router SPA
- * Navegación basada en hash, carga dinámica de páginas y protección de rutas
- */
-
-// ============================================
-// CONFIGURACIÓN DE RUTAS
-// ============================================
-const routes = {
-    'inicio': { title: 'Inicio', protegida: false, script: null },
-    'laboratorios': { title: 'Laboratorios', protegida: false, script: null },
-    'detalle': { title: 'Detalle del Laboratorio', protegida: false, script: null },
-    'subir': { title: 'Subir Laboratorio', protegida: true, script: null },
-    'categorias': { title: 'Categorías', protegida: false, script: null },
-    'registro': { title: 'Registrarse', protegida: false, script: null },
-    'login': { title: 'Iniciar Sesión', protegida: false, script: null },
-    'verificacion': { title: 'Verificar Cuenta', protegida: false, script: null }
-};
-
-// Cache de scripts ya ejecutados para evitar duplicados
-const executedScripts = new Set();
-
-// ============================================
-// FUNCIÓN PRINCIPAL: CARGAR PÁGINA
-// ============================================
-async function cargarPagina(page, params = {}) {
-    const contentDiv = document.getElementById('page-content');
-    if (!contentDiv) return;
-
-    // Validar si la ruta es protegida y el usuario no está autenticado
-    if (routes[page]?.protegida && !firebaseAuth.currentUser) {
-        mostrarAlerta('Debes iniciar sesión para acceder a esta sección', 'warning');
-        page = 'login';
-        params = {};
-    }
-
-    // Guardar estado actual (opcional)
-    window.currentPage = page;
-    window.currentParams = params;
-
-    // Mostrar loader
-    contentDiv.innerHTML = `
-        <div class="loader-container" style="display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 400px;">
-            <div class="loader-spinner"></div>
-            <p style="margin-top: 1rem; color: var(--text-muted);">Cargando ${routes[page]?.title || page}...</p>
-        </div>
-    `;
-
-    // Actualizar título del documento
-    document.title = `AXON | ${routes[page]?.title || page}`;
-
-    try {
-        // Cargar el HTML de la página desde /pages/
-        const response = await fetch(`pages/${page}.html`);
-        if (!response.ok) throw new Error(`HTTP ${response.status} - ${response.statusText}`);
-
-        let html = await response.text();
-
-        // Extraer y ejecutar scripts del HTML (sin duplicar)
-        const { cleanHtml, scripts } = extraerScripts(html);
-        contentDiv.innerHTML = cleanHtml;
-        ejecutarScriptsUnicos(scripts);
-
-        // Marcar enlace activo en el menú lateral
-        marcarEnlaceActivo(page);
-
-        // Disparar evento personalizado para que otros módulos sepan que se cargó una nueva página
-        const event = new CustomEvent('pageLoaded', {
-            detail: { page, params, timestamp: Date.now() }
-        });
-        document.dispatchEvent(event);
-
-        console.log(`✅ Página cargada: ${page}`);
-
-    } catch (error) {
-        console.error('❌ Error al cargar la página:', error);
-        contentDiv.innerHTML = `
-            <div class="container" style="text-align: center; padding: 3rem;">
-                <span style="font-size: 4rem;">❌</span>
-                <h2>Error al cargar la página</h2>
-                <p>${error.message}</p>
-                <button class="btn btn-primary" onclick="location.reload()">Recargar</button>
-                <button class="btn btn-outline" onclick="window.cambiarPagina('inicio')">Ir al inicio</button>
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>AXON | Laboratorios Académicos</title>
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <!-- CSS -->
+    <link rel="stylesheet" href="css/estilo.css">
+    <link rel="stylesheet" href="css/layout.css">
+    <link rel="stylesheet" href="css/componentes.css">
+    <link rel="stylesheet" href="css/animaciones.css">
+    <link rel="stylesheet" href="css/dark-mode.css">
+    <!-- Firebase SDKs -->
+    <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-storage-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-messaging-compat.js"></script>
+    <!-- EmailJS -->
+    <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
+</head>
+<body>
+    <div class="app-container">
+        <aside class="sidebar" id="sidebar">
+            <div class="sidebar__header">
+                <div class="sidebar__logo">AXON</div>
+                <div class="sidebar__subtitle">Laboratorios Académicos</div>
             </div>
-        `;
-    }
-}
+            <nav class="sidebar__nav">
+                <a href="#inicio" class="nav-link active" data-page="inicio"><span class="icon">🏠</span><span>Inicio</span></a>
+                <a href="#laboratorios" class="nav-link" data-page="laboratorios"><span class="icon">📚</span><span>Laboratorios</span></a>
+                <a href="#categorias" class="nav-link" data-page="categorias"><span class="icon">🏷️</span><span>Categorías</span></a>
+                <a href="#subir" class="nav-link" data-page="subir" id="subirNavLink" style="display: none;"><span class="icon">📤</span><span>Subir Laboratorio</span></a>
+                <div class="sidebar__divider"></div>
+                <a href="#registro" class="nav-link" data-page="registro" id="registroNavLink"><span class="icon">📝</span><span>Registrarse</span></a>
+                <a href="#login" class="nav-link" data-page="login" id="loginNavLink"><span class="icon">🔑</span><span>Iniciar Sesión</span></a>
+                <a href="#logout" class="nav-link" id="logoutNavLink" style="display: none;"><span class="icon">🚪</span><span>Cerrar Sesión</span></a>
+            </nav>
+        </aside>
+        <div class="sidebar-overlay" id="sidebarOverlay"></div>
+        <main class="main-content">
+            <header class="main-header">
+                <button class="menu-toggle" id="menuToggle">☰</button>
+                <div class="user-info" id="userInfo">
+                    <span class="user-greeting">Bienvenido, <span id="userName">Invitado</span></span>
+                    <div class="user-avatar" id="userAvatar">👤</div>
+                </div>
+            </header>
+            <div id="page-content" class="page-content">
+                <div class="loader"><div class="loader-spinner"></div></div>
+            </div>
+        </main>
+    </div>
 
-// ============================================
-// EXTRAER SCRIPTS DEL HTML (INLINE Y EXTERNOS)
-// ============================================
-function extraerScripts(html) {
-    const tempDiv = document.createElement('div');
-    tempDiv.innerHTML = html;
+    <!-- ============================================ -->
+    <!-- SCRIPTS (CON ROUTER INCLUIDO)                -->
+    <!-- ============================================ -->
+    <script src="js/firebase-config.js"></script>
+    <script src="js/utils.js"></script>
+    <script src="js/validaciones.js"></script>
+    <script src="js/auth.js"></script>
+    <script src="js/labs.js"></script>
+    <script src="js/progreso.js"></script>
+    <script src="js/buscador.js"></script>
+    <!-- Ya no se carga router.js externo, va inline -->
+    <script src="js/fcm.js"></script>
+    <script src="js/app.js"></script>
 
-    const scripts = [];
-    const scriptElements = tempDiv.querySelectorAll('script');
+    <!-- ROUTER SPA (INLINE) -->
+    <script>
+        (function() {
+            const routes = {
+                'inicio': { title: 'Inicio', protegida: false },
+                'laboratorios': { title: 'Laboratorios', protegida: false },
+                'detalle': { title: 'Detalle', protegida: false },
+                'subir': { title: 'Subir Laboratorio', protegida: true },
+                'categorias': { title: 'Categorías', protegida: false },
+                'registro': { title: 'Registrarse', protegida: false },
+                'login': { title: 'Iniciar Sesión', protegida: false },
+                'verificacion': { title: 'Verificar Cuenta', protegida: false }
+            };
 
-    scriptElements.forEach(script => {
-        const content = script.textContent;
-        const src = script.src;
-        if (content && content.trim()) {
-            scripts.push({ type: 'inline', content: content });
-        } else if (src) {
-            scripts.push({ type: 'external', src: src });
-        }
-        script.remove(); // eliminar del HTML para no ejecutarse dos veces
-    });
+            async function cargarPagina(page, params = {}) {
+                const contentDiv = document.getElementById('page-content');
+                if (!contentDiv) return;
 
-    return { cleanHtml: tempDiv.innerHTML, scripts };
-}
+                // Protección de rutas
+                if (routes[page]?.protegida && (!window.firebaseAuth || !window.firebaseAuth.currentUser)) {
+                    mostrarAlerta('Debes iniciar sesión', 'warning');
+                    page = 'login';
+                }
 
-// ============================================
-// EJECUTAR SCRIPTS EVITANDO DUPLICADOS
-// ============================================
-function ejecutarScriptsUnicos(scripts) {
-    scripts.forEach(script => {
-        let key;
-        if (script.type === 'inline') {
-            // Usar el hash del contenido como clave (primeros 100 caracteres)
-            key = script.content.substring(0, 100);
-        } else {
-            key = script.src;
-        }
+                contentDiv.innerHTML = '<div class="loader"><div class="loader-spinner"></div><p>Cargando...</p></div>';
+                document.title = `AXON | ${routes[page]?.title || page}`;
 
-        if (!executedScripts.has(key)) {
-            executedScripts.add(key);
-            const newScript = document.createElement('script');
-            if (script.type === 'inline') {
-                newScript.textContent = script.content;
-            } else {
-                newScript.src = script.src;
-                newScript.async = false;
+                try {
+                    const response = await fetch(`pages/${page}.html`);
+                    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                    let html = await response.text();
+                    // Extraer scripts para ejecutarlos después (evitar duplicados)
+                    const tempDiv = document.createElement('div');
+                    tempDiv.innerHTML = html;
+                    const scripts = [];
+                    tempDiv.querySelectorAll('script').forEach(script => {
+                        if (script.textContent.trim()) scripts.push(script.textContent);
+                        script.remove();
+                    });
+                    contentDiv.innerHTML = tempDiv.innerHTML;
+                    // Ejecutar scripts inline de la página
+                    scripts.forEach(scriptContent => {
+                        const newScript = document.createElement('script');
+                        newScript.textContent = scriptContent;
+                        document.body.appendChild(newScript);
+                    });
+                    // Marcar enlace activo
+                    document.querySelectorAll('.nav-link').forEach(link => {
+                        link.classList.remove('active');
+                        if (link.getAttribute('data-page') === page) link.classList.add('active');
+                    });
+                    // Disparar evento
+                    document.dispatchEvent(new CustomEvent('pageLoaded', { detail: { page, params } }));
+                    console.log(`✅ Página cargada: ${page}`);
+                } catch (error) {
+                    contentDiv.innerHTML = `<div class="container"><h2>Error</h2><p>${error.message}</p><button onclick="location.reload()">Recargar</button></div>`;
+                }
             }
-            document.body.appendChild(newScript);
-        }
-    });
-}
 
-// ============================================
-// MARCAR ENLACE ACTIVO EN EL SIDEBAR
-// ============================================
-function marcarEnlaceActivo(page) {
-    document.querySelectorAll('.nav-link').forEach(link => {
-        link.classList.remove('active');
-        if (link.getAttribute('data-page') === page) {
-            link.classList.add('active');
-        }
-    });
-}
+            function mostrarAlerta(msg, tipo) {
+                const div = document.createElement('div');
+                div.textContent = msg;
+                div.style.cssText = 'position:fixed; bottom:20px; right:20px; background:#333; color:white; padding:10px; border-radius:8px; z-index:10000;';
+                document.body.appendChild(div);
+                setTimeout(() => div.remove(), 3000);
+            }
 
-// ============================================
-// MOSTRAR ALERTA TEMPORAL (OPCIONAL)
-// ============================================
-function mostrarAlerta(mensaje, tipo = 'info') {
-    const alertDiv = document.createElement('div');
-    alertDiv.className = `alert alert-${tipo}`;
-    alertDiv.innerHTML = `<span>${tipo === 'warning' ? '⚠️' : 'ℹ️'}</span> ${mensaje}`;
-    alertDiv.style.cssText = `
-        position: fixed;
-        bottom: 20px;
-        right: 20px;
-        z-index: 10000;
-        max-width: 350px;
-        background: white;
-        border-left: 4px solid #f0ad4e;
-        padding: 12px 20px;
-        border-radius: 8px;
-        box-shadow: 0 2px 10px rgba(0,0,0,0.2);
-        font-size: 14px;
-        animation: slideInRight 0.3s ease;
-    `;
-    document.body.appendChild(alertDiv);
-    setTimeout(() => alertDiv.remove(), 4000);
-}
+            function handleRoute() {
+                let hash = window.location.hash.slice(1) || 'inicio';
+                let [page, queryString] = hash.split('?');
+                const params = {};
+                if (queryString) {
+                    queryString.split('&').forEach(p => {
+                        let [k, v] = p.split('=');
+                        if (k && v) params[k] = decodeURIComponent(v);
+                    });
+                }
+                if (!routes[page]) page = 'inicio';
+                cargarPagina(page, params);
+            }
 
-// ============================================
-// NAVEGACIÓN POR HASH
-// ============================================
-function handleRoute() {
-    let hash = window.location.hash.slice(1) || 'inicio';
-    // Separar la página de los parámetros (ej: "detalle?id=123")
-    let [page, queryString] = hash.split('?');
-    const params = {};
-    if (queryString) {
-        queryString.split('&').forEach(param => {
-            const [key, value] = param.split('=');
-            if (key && value) params[key] = decodeURIComponent(value);
-        });
-    }
-    // Validar que la ruta exista, si no, redirigir a inicio
-    if (!routes[page]) page = 'inicio';
-    cargarPagina(page, params);
-}
-
-// ============================================
-// FUNCIÓN PÚBLICA PARA NAVEGAR PROGRAMÁTICAMENTE
-// ============================================
-function navegarA(page, params = {}) {
-    const queryString = Object.entries(params)
-        .map(([k, v]) => `${k}=${encodeURIComponent(v)}`)
-        .join('&');
-    const hash = queryString ? `${page}?${queryString}` : page;
-    window.location.hash = hash;
-}
-
-// ============================================
-// LIMPIAR CACHÉ DE SCRIPTS (ÚTIL PARA RECARGAR)
-// ============================================
-function limpiarCacheScripts() {
-    executedScripts.clear();
-    console.log('🗑️ Caché de scripts limpiada');
-}
-
-// ============================================
-// INICIALIZAR ROUTER
-// ============================================
-window.addEventListener('hashchange', handleRoute);
-
-// Exponer funciones globales para usar desde otros scripts
-window.cambiarPagina = cargarPagina;   // alias
-window.navegarA = navegarA;
-window.limpiarCacheScripts = limpiarCacheScripts;
-
-// Inicializar cuando el DOM esté listo
-if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', handleRoute);
-} else {
-    handleRoute();
-}
-
-console.log('✅ Router SPA inicializado');
+            window.addEventListener('hashchange', handleRoute);
+            window.cambiarPagina = (page, params) => {
+                let url = page;
+                if (params) url += '?' + new URLSearchParams(params).toString();
+                window.location.hash = url;
+            };
+            if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', handleRoute);
+            else handleRoute();
+        })();
+    </script>
+</body>
+</html>
