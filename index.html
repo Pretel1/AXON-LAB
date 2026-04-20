@@ -3,36 +3,19 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-    <meta name="description" content="AXON - Repositorio de Laboratorios Académicos. Accede, comparte y gestiona laboratorios de todas las áreas del conocimiento.">
-    <meta name="author" content="AXON Team">
-    <meta name="keywords" content="laboratorios, académicos, repositorio, educación, redes, programación, inteligencia artificial">
-    <meta name="theme-color" content="#0a0a0f">
-    
-    <title>AXON | Laboratorios Académicos</title>
-    
+    <title>AXON - Laboratorios Académicos</title>
     <!-- Google Fonts -->
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
-    
     <!-- CSS Stylesheets -->
     <link rel="stylesheet" href="css/estilo.css">
     <link rel="stylesheet" href="css/layout.css">
     <link rel="stylesheet" href="css/componentes.css">
     <link rel="stylesheet" href="css/animaciones.css">
     <link rel="stylesheet" href="css/dark-mode.css">
-    
-    <!-- Firebase SDKs (versión compat) -->
-    <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-auth-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-storage-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-messaging-compat.js"></script>
-    
-    <!-- EmailJS SDK -->
-    <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
 </head>
 <body>
     <div class="app-container">
-        <!-- SIDEBAR -->
+        <!-- SIDEBAR (igual que antes) -->
         <aside class="sidebar" id="sidebar">
             <div class="sidebar__header">
                 <div class="sidebar__logo">AXON</div>
@@ -66,25 +49,7 @@
         </main>
     </div>
 
-    <!-- ============================================ -->
-    <!-- SCRIPTS DE LA APLICACIÓN (SIN DUPLICACIÓN)   -->
-    <!-- ============================================ -->
-    <!-- Configuración única de Firebase (define window.firebaseAuth, etc.) -->
-    <script src="js/firebase-config.js"></script>
-    
-    <!-- Utilidades y validaciones -->
-    <script src="js/utils.js"></script>
-    <script src="js/validaciones.js"></script>
-    
-    <!-- Módulos principales -->
-    <script src="js/auth.js"></script>
-    <script src="js/labs.js"></script>
-    <script src="js/progreso.js"></script>
-    <script src="js/buscador.js"></script>
-    
-    <!-- Navegación SPA y FCM -->
-    <script src="js/router.js"></script>
-    <script src="js/fcm.js"></script>
-    <script src="js/app.js"></script>
+    <!-- Script principal (contiene router, auth, lógica de laboratorios) -->
+    <script src="js/main.js"></script>
 </body>
 </html>
