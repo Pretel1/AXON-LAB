@@ -1,8 +1,8 @@
 <div class="container">
     <h2>📚 Laboratorios Disponibles</h2>
     <div class="search-bar">
-        <input type="text" id="searchInput" placeholder="Buscar por nombre..." oninput="filtrarLaboratorios()">
-        <select id="categoriaFilter" onchange="filtrarLaboratorios()">
+        <input type="text" id="searchInput" placeholder="Buscar por nombre..." oninput="filtrar()">
+        <select id="categoriaFilter" onchange="filtrar()">
             <option value="">Todas las categorías</option>
             <option>Programación</option>
             <option>Redes</option>
@@ -18,53 +18,39 @@
 <script>
     let laboratorios = [];
 
-    async function cargarLaboratorios() {
-        const snapshot = await firebaseDB.collection('laboratorios').get();
-        laboratorios = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-        renderizarLaboratorios();
+    function cargarLabs() {
+        laboratorios = window.obtenerLaboratorios();
+        filtrar();
     }
 
-    function renderizarLaboratorios() {
-        const term = document.getElementById('searchInput')?.value.toLowerCase() || '';
-        const cat = document.getElementById('categoriaFilter')?.value || '';
-        const filtrados = laboratorios.filter(lab => 
+    function filtrar() {
+        const term = document.getElementById('searchInput').value.toLowerCase();
+        const cat = document.getElementById('categoriaFilter').value;
+        const filtrados = laboratorios.filter(lab =>
             lab.nombre.toLowerCase().includes(term) &&
             (cat === '' || lab.categoria === cat)
         );
         const contenedor = document.getElementById('listaLaboratorios');
-        if (!contenedor) return;
-        if (filtrados.length === 0) {
-            contenedor.innerHTML = '<p>No hay laboratorios que coincidan.</p>';
+        if (!filtrados.length) {
+            contenedor.innerHTML = '<p>No hay laboratorios.</p>';
             return;
         }
         contenedor.innerHTML = filtrados.map(lab => `
             <div class="card">
+                ${lab.portada ? `<img src="${lab.portada}" style="width: 100%; height: 160px; object-fit: cover; border-radius: 12px; margin-bottom: 10px;">` : `<div style="width: 100%; height: 160px; background: #e2e8f0; border-radius: 12px; margin-bottom: 10px; display: flex; align-items: center; justify-content: center;">📷 Sin portada</div>`}
                 <h3>${lab.nombre}</h3>
                 <p><strong>Autor:</strong> ${lab.autor}</p>
                 <p><strong>Categoría:</strong> ${lab.categoria}</p>
                 <div class="url">🔗 ${lab.url.length > 50 ? lab.url.substring(0,50)+'...' : lab.url}</div>
                 <div class="btn-group">
-                    <button class="btn" onclick="visualizarArchivo('${lab.url}')">👁️ Ver archivo</button>
-                    <button class="btn btn-outline" onclick="descargarArchivo('${lab.url}')">⬇️ Descargar</button>
+                    <button class="btn" onclick="window.visualizarODescargar('${lab.url}')">👁️ Ver archivo</button>
+                    <button class="btn btn-outline" onclick="window.open('${lab.url}', '_blank'); window.mostrarNotificacion('Abre el enlace y descarga desde OneDrive', 'info');">⬇️ Descargar</button>
                 </div>
             </div>
         `).join('');
     }
 
-    window.visualizarArchivo = (url) => {
-        if (!url || url === '#') alert('Enlace no disponible');
-        else window.open(url, '_blank');
-    };
-    window.descargarArchivo = (url) => {
-        if (!url || url === '#') alert('Enlace no disponible');
-        else {
-            window.open(url, '_blank');
-            alert('El archivo se abrirá en una nueva pestaña. Desde OneDrive puedes usar el botón "Descargar".');
-        }
-    };
-    window.filtrarLaboratorios = () => renderizarLaboratorios();
-
-    document.addEventListener('pageLoaded', (e) => {
-        if (e.detail.page === 'laboratorios') cargarLaboratorios();
-    });
+    window.filtrar = filtrar;
+    cargarLabs();
+    document.addEventListener('pageLoaded', (e) => { if (e.detail.page === 'laboratorios') cargarLabs(); });
 </script>
