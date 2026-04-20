@@ -1,35 +1,51 @@
-// js/auth.js - Versión funcional sin OTP
-window.registrarUsuario = async (email, password, nombre) => {
-    try {
-        const userCredential = await firebaseAuth.createUserWithEmailAndPassword(email, password);
-        await firebaseDB.collection('usuarios').doc(userCredential.user.uid).set({
-            nombre, email, rol: 'usuario', verificado: true,
-            fechaRegistro: firebase.firestore.FieldValue.serverTimestamp()
-        });
-        await firebaseAuth.signOut();
-        return { success: true, message: 'Registro exitoso. Ahora inicia sesión.', verificacionRequerida: false };
-    } catch (error) {
-        let mensaje = error.code === 'auth/email-already-in-use' ? 'Correo ya registrado' :
-                      error.code === 'auth/weak-password' ? 'Contraseña débil (mínimo 6 caracteres)' : error.message;
-        return { success: false, message: mensaje };
+// js/auth.js - Autenticación con LocalStorage
+
+let currentUser = null;
+
+function initAuth() {
+    if (!localStorage.getItem('usuarios')) {
+        localStorage.setItem('usuarios', JSON.stringify([]));
     }
-};
-
-window.iniciarSesion = async (email, password) => {
-    try {
-        const cred = await firebaseAuth.signInWithEmailAndPassword(email, password);
-        const doc = await firebaseDB.collection('usuarios').doc(cred.user.uid).get();
-        if (!doc.exists || !doc.data().verificado) throw new Error('Cuenta no verificada');
-        return { success: true, user: { email, nombre: doc.data().nombre } };
-    } catch (error) {
-        return { success: false, message: 'Correo o contraseña incorrectos' };
+    const sessionUser = sessionStorage.getItem('currentUser');
+    if (sessionUser) {
+        currentUser = JSON.parse(sessionUser);
+        if (window.updateUI) window.updateUI(currentUser.nombre);
+    } else {
+        if (window.updateUI) window.updateUI(null);
     }
+}
+
+window.registrarUsuario = (nombre, email, password) => {
+    const usuarios = JSON.parse(localStorage.getItem('usuarios'));
+    if (usuarios.find(u => u.email === email)) {
+        return { success: false, message: 'El correo ya está registrado' };
+    }
+    usuarios.push({ id: Date.now(), nombre, email, password });
+    localStorage.setItem('usuarios', JSON.stringify(usuarios));
+    return { success: true, message: 'Registro exitoso. Ahora inicia sesión.' };
 };
 
-window.cerrarSesion = async () => {
-    await firebaseAuth.signOut();
-    window.location.hash = '#inicio';
-    if (window.actualizarUIUsuario) window.actualizarUIUsuario(null);
+window.iniciarSesion = (email, password) => {
+    const usuarios = JSON.parse(localStorage.getItem('usuarios'));
+    const user = usuarios.find(u => u.email === email && u.password === password);
+    if (user) {
+        currentUser = { id: user.id, nombre: user.nombre, email: user.email };
+        sessionStorage.setItem('currentUser', JSON.stringify(currentUser));
+        if (window.updateUI) window.updateUI(currentUser.nombre);
+        return { success: true, message: `Bienvenido ${user.nombre}` };
+    }
+    return { success: false, message: 'Credenciales incorrectas' };
 };
 
-console.log('Auth.js cargado');
+window.cerrarSesion = () => {
+    sessionStorage.removeItem('currentUser');
+    currentUser = null;
+    if (window.updateUI) window.updateUI(null);
+    if (window.cambiarPagina) window.cambiarPagina('inicio');
+};
+
+window.obtenerUsuarioActual = () => currentUser;
+window.haySesionActiva = () => currentUser !== null;
+
+initAuth();
+console.log('✅ Auth.js con LocalStorage');
