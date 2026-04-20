@@ -4,17 +4,12 @@
         <input type="text" id="searchInput" placeholder="Buscar por nombre..." oninput="filtrar()">
         <select id="categoriaFilter" onchange="filtrar()">
             <option value="">Todas las categorías</option>
-            <option>Programación</option>
-            <option>Redes</option>
-            <option>Bases de Datos</option>
-            <option>Inteligencia Artificial</option>
-            <option>Seguridad</option>
-            <option>Otros</option>
+            <option>Programación</option><option>Redes</option><option>Bases de Datos</option>
+            <option>Inteligencia Artificial</option><option>Seguridad</option><option>Otros</option>
         </select>
     </div>
     <div id="listaLaboratorios" class="grid"></div>
 </div>
-
 <script>
     let laboratorios = [];
 
@@ -26,6 +21,7 @@
     function filtrar() {
         const term = document.getElementById('searchInput').value.toLowerCase();
         const cat = document.getElementById('categoriaFilter').value;
+        const currentUser = window.obtenerUsuarioActual();
         const filtrados = laboratorios.filter(lab =>
             lab.nombre.toLowerCase().includes(term) &&
             (cat === '' || lab.categoria === cat)
@@ -37,20 +33,30 @@
         }
         contenedor.innerHTML = filtrados.map(lab => `
             <div class="card">
-                ${lab.portada ? `<img src="${lab.portada}" style="width: 100%; height: 160px; object-fit: cover; border-radius: 12px; margin-bottom: 10px;">` : `<div style="width: 100%; height: 160px; background: #e2e8f0; border-radius: 12px; margin-bottom: 10px; display: flex; align-items: center; justify-content: center;">📷 Sin portada</div>`}
+                <img src="${lab.imagenUrl}" alt="Portada" style="width:100%; height:160px; object-fit:cover; border-radius:12px; margin-bottom:10px;">
                 <h3>${lab.nombre}</h3>
                 <p><strong>Autor:</strong> ${lab.autor}</p>
                 <p><strong>Categoría:</strong> ${lab.categoria}</p>
-                <div class="url">🔗 ${lab.url.length > 50 ? lab.url.substring(0,50)+'...' : lab.url}</div>
+                <p><strong>Subido por:</strong> ${lab.ownerNombre || 'Anónimo'}</p>
                 <div class="btn-group">
-                    <button class="btn" onclick="window.visualizarODescargar('${lab.url}')">👁️ Ver archivo</button>
-                    <button class="btn btn-outline" onclick="window.open('${lab.url}', '_blank'); window.mostrarNotificacion('Abre el enlace y descarga desde OneDrive', 'info');">⬇️ Descargar</button>
+                    <button class="btn" onclick="window.visualizarArchivo('${lab.archivoUrl}')">📥 Ver/Descargar</button>
+                    ${currentUser && lab.ownerId === currentUser.id ? `<button class="btn btn-outline" onclick="eliminarLab(${lab.id})">🗑️ Eliminar</button>` : ''}
                 </div>
             </div>
         `).join('');
     }
 
+    async function eliminarLab(id) {
+        if (confirm('¿Eliminar este laboratorio?')) {
+            const result = window.eliminarLaboratorio(id);
+            window.mostrarNotificacion(result.message, result.success ? 'success' : 'error');
+            if (result.success) cargarLabs();
+        }
+    }
+
     window.filtrar = filtrar;
     cargarLabs();
-    document.addEventListener('pageLoaded', (e) => { if (e.detail.page === 'laboratorios') cargarLabs(); });
+    document.addEventListener('pageLoaded', (e) => {
+        if (e.detail.page === 'laboratorios') cargarLabs();
+    });
 </script>
