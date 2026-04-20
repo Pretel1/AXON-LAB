@@ -29,103 +29,103 @@
     
     <!-- EmailJS SDK -->
     <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
-    
-    <!-- Favicon -->
-    <!-- <link rel="icon" type="image/x-icon" href="assets/img/favicon.ico"> -->
 </head>
 <body>
     <div class="app-container">
-        <!-- ============================================ -->
-        <!-- SIDEBAR / MENÚ LATERAL                        -->
-        <!-- ============================================ -->
+        <!-- SIDEBAR -->
         <aside class="sidebar" id="sidebar">
             <div class="sidebar__header">
-                <div class="sidebar__logo">
-                    AXON
-                </div>
-                <div class="sidebar__subtitle">
-                    Laboratorios Académicos
-                </div>
+                <div class="sidebar__logo">AXON</div>
+                <div class="sidebar__subtitle">Laboratorios Académicos</div>
             </div>
             <nav class="sidebar__nav">
-                <a href="#inicio" class="nav-link active" data-page="inicio">
-                    <span class="icon">🏠</span>
-                    <span>Inicio</span>
-                </a>
-                <a href="#laboratorios" class="nav-link" data-page="laboratorios">
-                    <span class="icon">📚</span>
-                    <span>Laboratorios</span>
-                </a>
-                <a href="#categorias" class="nav-link" data-page="categorias">
-                    <span class="icon">🏷️</span>
-                    <span>Categorías</span>
-                </a>
-                <a href="#subir" class="nav-link" data-page="subir" id="subirNavLink" style="display: none;">
-                    <span class="icon">📤</span>
-                    <span>Subir Laboratorio</span>
-                </a>
+                <a href="#inicio" class="nav-link active" data-page="inicio"><span class="icon">🏠</span><span>Inicio</span></a>
+                <a href="#laboratorios" class="nav-link" data-page="laboratorios"><span class="icon">📚</span><span>Laboratorios</span></a>
+                <a href="#categorias" class="nav-link" data-page="categorias"><span class="icon">🏷️</span><span>Categorías</span></a>
+                <a href="#subir" class="nav-link" data-page="subir" id="subirNavLink" style="display: none;"><span class="icon">📤</span><span>Subir Laboratorio</span></a>
                 <div class="sidebar__divider"></div>
-                <a href="#registro" class="nav-link" data-page="registro" id="registroNavLink">
-                    <span class="icon">📝</span>
-                    <span>Registrarse</span>
-                </a>
-                <a href="#login" class="nav-link" data-page="login" id="loginNavLink">
-                    <span class="icon">🔑</span>
-                    <span>Iniciar Sesión</span>
-                </a>
-                <a href="#logout" class="nav-link" id="logoutNavLink" style="display: none;">
-                    <span class="icon">🚪</span>
-                    <span>Cerrar Sesión</span>
-                </a>
+                <a href="#registro" class="nav-link" data-page="registro" id="registroNavLink"><span class="icon">📝</span><span>Registrarse</span></a>
+                <a href="#login" class="nav-link" data-page="login" id="loginNavLink"><span class="icon">🔑</span><span>Iniciar Sesión</span></a>
+                <a href="#logout" class="nav-link" id="logoutNavLink" style="display: none;"><span class="icon">🚪</span><span>Cerrar Sesión</span></a>
             </nav>
         </aside>
 
-        <!-- Overlay para móvil (cierra sidebar al hacer clic fuera) -->
         <div class="sidebar-overlay" id="sidebarOverlay"></div>
 
-        <!-- ============================================ -->
-        <!-- MAIN CONTENT                                 -->
-        <!-- ============================================ -->
         <main class="main-content">
             <header class="main-header">
-                <button class="menu-toggle" id="menuToggle" aria-label="Menú">
-                    ☰
-                </button>
+                <button class="menu-toggle" id="menuToggle" aria-label="Menú">☰</button>
                 <div class="user-info" id="userInfo">
-                    <span class="user-greeting">
-                        Bienvenido, <span id="userName">Invitado</span>
-                    </span>
-                    <div class="user-avatar" id="userAvatar">
-                        👤
-                    </div>
+                    <span class="user-greeting">Bienvenido, <span id="userName">Invitado</span></span>
+                    <div class="user-avatar" id="userAvatar">👤</div>
                 </div>
             </header>
-            
-            <!-- Contenido dinámico de las páginas -->
             <div id="page-content" class="page-content">
-                <div class="loader">
-                    <div class="loader-spinner"></div>
-                </div>
+                <div class="loader"><div class="loader-spinner"></div></div>
             </div>
         </main>
     </div>
 
     <!-- ============================================ -->
+    <!-- INICIALIZACIÓN DIRECTA DE FIREBASE Y EMAILJS  -->
+    <!-- ============================================ -->
+    <script>
+        // CONFIGURACIÓN DE FIREBASE (reemplaza si es necesario)
+        const firebaseConfig = {
+            apiKey: "AIzaSyDOGFw9IN4fmE8_JmYvykSGqUK5U1Ts0c8",
+            authDomain: "axon-labs-b720e.firebaseapp.com",
+            projectId: "axon-labs-b720e",
+            storageBucket: "axon-labs-b720e.appspot.com",
+            messagingSenderId: "257085406188",
+            appId: "1:257085406188:web:e50d7fa62f388512dddec9"
+        };
+
+        try {
+            // Inicializar Firebase
+            firebase.initializeApp(firebaseConfig);
+            
+            // Obtener servicios
+            const auth = firebase.auth();
+            const db = firebase.firestore();
+            const storage = firebase.storage();
+            
+            // Persistencias
+            auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL);
+            db.enablePersistence({ synchronizeTabs: true }).catch(err => console.warn("Persistencia offline:", err.code));
+            
+            // Variables globales para TODOS los scripts
+            window.auth = auth;
+            window.db = db;
+            window.storage = storage;
+            // ALIAS para compatibilidad con app.js, auth.js, etc.
+            window.firebaseAuth = auth;
+            window.firebaseDB = db;
+            window.firebaseStorage = storage;
+            
+            console.log("✅ Firebase inicializado correctamente (desde index.html)");
+        } catch (error) {
+            console.error("❌ Error al inicializar Firebase:", error);
+        }
+
+        // Inicializar EmailJS (si tienes User ID, reemplázalo; si no, comenta esta línea)
+        try {
+            // emailjs.init("TU_USER_ID");  // Descomenta y pon tu ID si usas EmailJS
+            console.log("ℹ️ EmailJS no inicializado (opcional)");
+        } catch (error) {
+            console.warn("EmailJS error:", error);
+        }
+    </script>
+
+    <!-- ============================================ -->
     <!-- SCRIPTS DE LA APLICACIÓN                     -->
     <!-- ============================================ -->
-    
-    <!-- Configuración y utilidades base -->
     <script src="js/firebase-config.js"></script>
     <script src="js/utils.js"></script>
     <script src="js/validaciones.js"></script>
-    
-    <!-- Módulos principales -->
     <script src="js/auth.js"></script>
     <script src="js/labs.js"></script>
     <script src="js/progreso.js"></script>
     <script src="js/buscador.js"></script>
-    
-    <!-- Navegación SPA y FCM -->
     <script src="js/router.js"></script>
     <script src="js/fcm.js"></script>
     <script src="js/app.js"></script>
