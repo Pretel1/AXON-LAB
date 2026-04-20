@@ -1,5 +1,4 @@
-// js/router.js - Enrutador SPA (sin Firebase)
-
+// js/router.js
 const routes = {
     'inicio': { title: 'Inicio', protegida: false },
     'laboratorios': { title: 'Laboratorios', protegida: false },
@@ -14,17 +13,18 @@ async function cargarPagina(page, params = {}) {
     if (!contentDiv) return;
 
     if (routes[page]?.protegida && !window.haySesionActiva()) {
-        window.mostrarNotificacion('Debes iniciar sesión para acceder a esta sección', 'error');
+        window.mostrarNotificacion('Debes iniciar sesión', 'error');
         page = 'login';
     }
 
-    contentDiv.innerHTML = `<div class="loader-container" style="display: flex; justify-content: center; align-items: center; min-height: 400px;"><div class="loader-spinner"></div><p style="margin-left: 1rem;">Cargando...</p></div>`;
+    contentDiv.innerHTML = '<div class="loader"><div class="loader-spinner"></div><p>Cargando...</p></div>';
     document.title = `AXON | ${routes[page]?.title || page}`;
 
     try {
         const response = await fetch(`pages/${page}.html`);
         if (!response.ok) throw new Error(`HTTP ${response.status}`);
         let html = await response.text();
+
         const tempDiv = document.createElement('div');
         tempDiv.innerHTML = html;
         const scripts = [];
@@ -43,6 +43,7 @@ async function cargarPagina(page, params = {}) {
             link.classList.remove('active');
             if (link.getAttribute('data-page') === page) link.classList.add('active');
         });
+
         document.dispatchEvent(new CustomEvent('pageLoaded', { detail: { page, params } }));
         console.log(`✅ Página cargada: ${page}`);
     } catch (error) {
@@ -55,9 +56,9 @@ function handleRoute() {
     let [page, queryString] = hash.split('?');
     const params = {};
     if (queryString) {
-        queryString.split('&').forEach(pair => {
-            let [key, value] = pair.split('=');
-            if (key && value) params[key] = decodeURIComponent(value);
+        queryString.split('&').forEach(p => {
+            let [k, v] = p.split('=');
+            if (k && v) params[k] = decodeURIComponent(v);
         });
     }
     if (!routes[page]) page = 'inicio';
