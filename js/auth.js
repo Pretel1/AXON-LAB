@@ -1,5 +1,4 @@
-// js/auth.js - Autenticación con LocalStorage
-
+// js/auth.js
 let currentUser = null;
 
 function initAuth() {
@@ -18,9 +17,15 @@ function initAuth() {
 window.registrarUsuario = (nombre, email, password) => {
     const usuarios = JSON.parse(localStorage.getItem('usuarios'));
     if (usuarios.find(u => u.email === email)) {
-        return { success: false, message: 'El correo ya está registrado' };
+        return { success: false, message: 'El correo ya está registrado.' };
     }
-    usuarios.push({ id: Date.now(), nombre, email, password });
+    const nuevoUsuario = {
+        id: Date.now(),
+        nombre: nombre.trim(),
+        email: email.trim(),
+        password: password
+    };
+    usuarios.push(nuevoUsuario);
     localStorage.setItem('usuarios', JSON.stringify(usuarios));
     return { success: true, message: 'Registro exitoso. Ahora inicia sesión.' };
 };
@@ -32,9 +37,9 @@ window.iniciarSesion = (email, password) => {
         currentUser = { id: user.id, nombre: user.nombre, email: user.email };
         sessionStorage.setItem('currentUser', JSON.stringify(currentUser));
         if (window.updateUI) window.updateUI(currentUser.nombre);
-        return { success: true, message: `Bienvenido ${user.nombre}` };
+        return { success: true, message: `Bienvenido, ${user.nombre}` };
     }
-    return { success: false, message: 'Credenciales incorrectas' };
+    return { success: false, message: 'Correo o contraseña incorrectos.' };
 };
 
 window.cerrarSesion = () => {
@@ -48,4 +53,4 @@ window.obtenerUsuarioActual = () => currentUser;
 window.haySesionActiva = () => currentUser !== null;
 
 initAuth();
-console.log('✅ Auth.js con LocalStorage');
+console.log('✅ Auth.js cargado (LocalStorage)');
