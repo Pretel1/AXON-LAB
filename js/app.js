@@ -1,101 +1,118 @@
-// js/auth.js
-import { account, ID, updateCurrentUser, currentUser } from './appwrite-config.js';
+// js/labs.js
+import { storage, databases, ID, DATABASE_ID, LABS_COLLECTION_ID, DOCUMENTS_BUCKET_ID, currentUser } from './appwrite-config.js';
 
-// Registrar usuario
-export async function registerUser(email, password, name) {
+// Subir un laboratorio
+export async function uploadLab(file, title, description, category) {
+    if (!currentUser) {
+        return { success: false, error: 'Debes iniciar sesión para subir laboratorios' };
+    }
+    
     try {
-        const response = await account.create(ID.unique(), email, password, name);
-        // Iniciar sesión automáticamente después del registro
-        await loginUser(email, password);
-        return { success: true, user: response };
+        // 1. Subir archivo a Storage
+        const fileResponse = await storage.createFile(
+            DOCUMENTS_BUCKET_ID,
+            ID.unique(),
+            file
+        );
+        
+        // 2. Guardar metadatos en la base de datos
+        const metadata = {
+            title: title,
+            description: description,
+            category: category,
+            fileId: fileResponse.$id,
+            fileName: file.name,
+            fileSize: file.size,
+            fileType: file.type,
+            userId: currentUser.$id,
+            userEmail: currentUser.email,
+            userName: currentUser.name || currentUser.email,
+            createdAt: new Date().toISOString(),
+            downloads: 0
+        };
+        
+        const dbResponse = await databases.createDocument(
+            DATABASE_ID,
+            LABS_COLLECTION_ID,
+            ID.unique(),
+            metadata
+        );
+        
+        return { success: true, file: fileResponse, metadata: dbResponse };
     } catch (error) {
-        console.error('Error en registro:', error);
+        console.error('Error al subir:', error);
         return { success: false, error: error.message };
     }
 }
 
-// Iniciar sesión
-export async function loginUser(email, password) {
+// Listar todos los laboratorios
+export async function listLabs(category = null) {
     try {
-        const session = await account.createEmailPasswordSession(email, password);
-        await updateCurrentUser();
+        let queries = [];
         
-        // Guardar sesión en localStorage
-        localStorage.setItem('userSession', 'active');
-        localStorage.setItem('userEmail', email);
+        if (category && category !== 'todos') {
+            queries.push(`category="${category}"`);
+        }
         
-        // Actualizar UI
-        updateAuthUI();
+        // Ordenar por fecha más reciente
+        queries.push('orderDesc("createdAt")');
         
-        return { success: true, session };
+        const response = await databases.listDocuments(
+            DATABASE_ID,
+            LABS_COLLECTION_ID,
+            queries
+        );
+        
+        return { success: true, labs: response.documents };
     } catch (error) {
-        console.error('Error en login:', error);
-        return { success: false, error: error.message };
+        console.error('Error al listar:', error);
+        return { success: false, error: error.message, labs: [] };
     }
 }
 
-// Cerrar sesión
-export async function logoutUser() {
+// Obtener URL de descarga
+export async function getDownloadUrl(fileId) {
     try {
-        await account.deleteSession('current');
-        localStorage.removeItem('userSession');
-        localStorage.removeItem('userEmail');
-        currentUser = null;
+        const url = storage.getFileView(DOCUMENTS_BUCKET_ID, fileId);
+        return url;
+    } catch (error) {
+        console.error('Error al obtener URL:', error);
+        return null;
+    }
+}
+
+// Incrementar contador de descargas
+export async function incrementDownloads(labId, currentDownloads) {
+    try {
+        const response = await databases.updateDocument(
+            DATABASE_ID,
+            LABS_COLLECTION_ID,
+            labId,
+            { downloads: currentDownloads + 1 }
+        );
+        return response;
+    } catch (error) {
+        console.error('Error al actualizar descargas:', error);
+        return null;
+    }
+}
+
+// Eliminar laboratorio (solo para administradores o dueños)
+export async function deleteLab(labId, fileId, userId) {
+    if (!currentUser || (currentUser.$id !== userId && !currentUser.labels?.includes('admin'))) {
+        return { success: false, error: 'No tienes permisos para eliminar este laboratorio' };
+    }
+    
+    try {
+        // Eliminar de la base de datos
+        await databases.deleteDocument(DATABASE_ID, LABS_COLLECTION_ID, labId);
         
-        // Actualizar UI
-        updateAuthUI();
-        
-        // Redirigir a inicio
-        window.location.hash = '#inicio';
+        // Eliminar archivo del storage
+        await storage.deleteFile(DOCUMENTS_BUCKET_ID, fileId);
         
         return { success: true };
     } catch (error) {
-        console.error('Error al cerrar sesión:', error);
+        console.error('Error al eliminar:', error);
         return { success: false, error: error.message };
     }
-}
-
-// Verificar si hay sesión activa
-export function isAuthenticated() {
-    return localStorage.getItem('userSession') !== null;
-}
-
-// Obtener usuario actual (síncrono)
-export function getCurrentUser() {
-    return currentUser;
-}
-
-// Actualizar interfaz según autenticación
-export function updateAuthUI() {
-    const isAuth = isAuthenticated();
-    const userNameSpan = document.getElementById('userName');
-    const userAvatar = document.getElementById('userAvatar');
-    const registroLink = document.getElementById('registroNavLink');
-    const loginLink = document.getElementById('loginNavLink');
-    const logoutLink = document.getElementById('logoutNavLink');
-    const subirLink = document.getElementById('subirNavLink');
-    
-    if (isAuth && currentUser) {
-        // Usuario logueado
-        if (userNameSpan) userNameSpan.textContent = currentUser.name || currentUser.email;
-        if (userAvatar) userAvatar.textContent = currentUser.name ? currentUser.name.charAt(0).toUpperCase() : '👤';
-        if (registroLink) registroLink.style.display = 'none';
-        if (loginLink) loginLink.style.display = 'none';
-        if (logoutLink) logoutLink.style.display = 'flex';
-        if (subirLink) subirLink.style.display = 'flex';
-    } else {
-        // Usuario invitado
-        if (userNameSpan) userNameSpan.textContent = 'Invitado';
-        if (userAvatar) userAvatar.textContent = '👤';
-        if (registroLink) registroLink.style.display = 'flex';
-        if (loginLink) loginLink.style.display = 'flex';
-        if (logoutLink) logoutLink.style.display = 'none';
-        if (subirLink) subirLink.style.display = 'none';
-    }
-}
-
-// Cargar usuario actual al iniciar
-export async function loadCurrentUser() {
-    await updateCurrentUser();
-    updateAuthUI();
 }
