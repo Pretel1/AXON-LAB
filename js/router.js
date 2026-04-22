@@ -1,77 +1,128 @@
 // js/router.js
+import { isAuthenticated } from './auth.js';
+
+// Mapa de rutas a archivos HTML
 const routes = {
-    'inicio': { title: 'Inicio', protegida: false },
-    'laboratorios': { title: 'Laboratorios', protegida: false },
-    'categorias': { title: 'Categorías', protegida: false },
-    'subir': { title: 'Subir Laboratorio', protegida: true },
-    'registro': { title: 'Registrarse', protegida: false },
-    'login': { title: 'Iniciar Sesión', protegida: false }
+    'inicio': 'pages/inicio.html',
+    'laboratorios': 'pages/laboratorios.html',
+    'categorias': 'pages/categorias.html',
+    'subir': 'pages/subir.html',
+    'registro': 'pages/registro.html',
+    'login': 'pages/login.html',
+    'verificacion': 'pages/verificacion.html',
+    'detalle': 'pages/detalle.html'
 };
 
-async function cargarPagina(page, params = {}) {
+// Página actual
+let currentPage = 'inicio';
+
+// Inicializar router
+export function initRouter() {
+    // Escuchar cambios en el hash
+    window.addEventListener('hashchange', handleRoute);
+    
+    // Escuchar clics en enlaces de navegación
+    document.querySelectorAll('.nav-link[data-page]').forEach(link => {
+        link.addEventListener('click', (e) => {
+            e.preventDefault();
+            const page = link.dataset.page;
+            navigateTo(page);
+        });
+    });
+    
+    // Manejar la ruta inicial
+    handleRoute();
+}
+
+// Navegar a una página
+export function navigateTo(page, params = {}) {
+    // Guardar parámetros en sessionStorage si es necesario
+    if (Object.keys(params).length > 0) {
+        sessionStorage.setItem('navigationParams', JSON.stringify(params));
+    }
+    
+    window.location.hash = page;
+}
+
+// Manejar el cambio de ruta
+async function handleRoute() {
+    let page = window.location.hash.slice(1) || 'inicio';
+    
+    // Verificar si la página requiere autenticación
+    const protectedPages = ['subir'];
+    if (protectedPages.includes(page) && !isAuthenticated()) {
+        page = 'login';
+        window.location.hash = 'login';
+    }
+    
+    currentPage = page;
+    
+    // Actualizar clase activa en el menú
+    updateActiveNavLink(page);
+    
+    // Cargar la página
+    await loadPage(page);
+}
+
+// Actualizar enlace activo en el sidebar
+function updateActiveNavLink(page) {
+    document.querySelectorAll('.nav-link').forEach(link => {
+        link.classList.remove('active');
+        if (link.dataset.page === page) {
+            link.classList.add('active');
+        }
+    });
+}
+
+// Cargar el contenido de la página
+export async function loadPage(page) {
     const contentDiv = document.getElementById('page-content');
     if (!contentDiv) return;
-
-    if (routes[page]?.protegida && !window.haySesionActiva()) {
-        window.mostrarNotificacion('Debes iniciar sesión', 'error');
-        page = 'login';
+    
+    // Mostrar loader
+    contentDiv.innerHTML = '<div class="loader"><div class="loader-spinner"></div></div>';
+    
+    const route = routes[page];
+    if (!route) {
+        contentDiv.innerHTML = '<h2>Página no encontrada</h2>';
+        return;
     }
-
-    contentDiv.innerHTML = '<div class="loader"><div class="loader-spinner"></div><p>Cargando...</p></div>';
-    document.title = `AXON | ${routes[page]?.title || page}`;
-
+    
     try {
-        const response = await fetch(`pages/${page}.html`);
-        if (!response.ok) throw new Error(`HTTP ${response.status}`);
-        let html = await response.text();
-
-        const tempDiv = document.createElement('div');
-        tempDiv.innerHTML = html;
-        const scripts = [];
-        tempDiv.querySelectorAll('script').forEach(script => {
-            if (script.textContent.trim()) scripts.push(script.textContent);
-            script.remove();
-        });
-        contentDiv.innerHTML = tempDiv.innerHTML;
-        scripts.forEach(scriptContent => {
-            const newScript = document.createElement('script');
-            newScript.textContent = scriptContent;
-            document.body.appendChild(newScript);
-        });
-
-        document.querySelectorAll('.nav-link').forEach(link => {
-            link.classList.remove('active');
-            if (link.getAttribute('data-page') === page) link.classList.add('active');
-        });
-
-        document.dispatchEvent(new CustomEvent('pageLoaded', { detail: { page, params } }));
-        console.log(`✅ Página cargada: ${page}`);
+        const response = await fetch(route);
+        if (!response.ok) throw new Error('Error al cargar la página');
+        
+        const html = await response.text();
+        contentDiv.innerHTML = html;
+        
+        // Ejecutar scripts específicos de la página cargada
+        await executePageScripts(page);
+        
     } catch (error) {
-        contentDiv.innerHTML = `<div class="container"><h2>Error</h2><p>No se pudo cargar ${page}.html: ${error.message}</p><button class="btn" onclick="location.reload()">Recargar</button></div>`;
+        console.error('Error cargando página:', error);
+        contentDiv.innerHTML = '<h2>Error al cargar la página</h2>';
     }
 }
 
-function handleRoute() {
-    let hash = window.location.hash.slice(1) || 'inicio';
-    let [page, queryString] = hash.split('?');
-    const params = {};
-    if (queryString) {
-        queryString.split('&').forEach(p => {
-            let [k, v] = p.split('=');
-            if (k && v) params[k] = decodeURIComponent(v);
-        });
+// Ejecutar scripts específicos después de cargar una página
+async function executePageScripts(page) {
+    // Importar dinámicamente los scripts según la página
+    switch(page) {
+        case 'laboratorios':
+            const { initLabsPage } = await import('./labs.js');
+            if (typeof initLabsPage === 'function') await initLabsPage();
+            break;
+        case 'subir':
+            const { initUploadPage } = await import('./labs.js');
+            if (typeof initUploadPage === 'function') await initUploadPage();
+            break;
+        case 'login':
+            const { initLoginPage } = await import('./auth.js');
+            if (typeof initLoginPage === 'function') await initLoginPage();
+            break;
+        case 'registro':
+            const { initRegisterPage } = await import('./auth.js');
+            if (typeof initRegisterPage === 'function') await initRegisterPage();
+            break;
     }
-    if (!routes[page]) page = 'inicio';
-    cargarPagina(page, params);
 }
-
-window.cambiarPagina = (page, params = {}) => {
-    let hash = page;
-    const query = new URLSearchParams(params).toString();
-    if (query) hash += '?' + query;
-    window.location.hash = hash;
-};
-
-window.addEventListener('hashchange', handleRoute);
-document.addEventListener('DOMContentLoaded', handleRoute);
-console.log('✅ Router.js cargado');
