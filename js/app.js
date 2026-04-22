@@ -1,73 +1,74 @@
 // js/app.js
-window.updateUI = (nombre) => {
-    const userNameSpan = document.getElementById('userName');
-    const subirLink = document.getElementById('subirNavLink');
-    const registroLink = document.getElementById('registroNavLink');
-    const loginLink = document.getElementById('loginNavLink');
-    const logoutLink = document.getElementById('logoutNavLink');
-    if (nombre) {
-        userNameSpan.textContent = nombre;
-        subirLink.style.display = 'flex';
-        registroLink.style.display = 'none';
-        loginLink.style.display = 'none';
-        logoutLink.style.display = 'flex';
-    } else {
-        userNameSpan.textContent = 'Invitado';
-        subirLink.style.display = 'none';
-        registroLink.style.display = 'flex';
-        loginLink.style.display = 'flex';
-        logoutLink.style.display = 'none';
+import { loadCurrentUser, isAuthenticated, updateAuthUI } from './auth.js';
+import { listLabs, uploadLab, getDownloadUrl, incrementDownloads } from './labs.js';
+import { initRouter, navigateTo, loadPage } from './router.js';
+
+// Variables globales para el estado de la app
+window.appState = {
+    currentUser: null,
+    labs: [],
+    currentCategory: 'todos'
+};
+
+// Inicializar la aplicación
+async function initApp() {
+    console.log('🚀 Iniciando AXON-LAB con Appwrite');
+    
+    // Cargar usuario actual
+    await loadCurrentUser();
+    
+    // Inicializar el router
+    initRouter();
+    
+    // Configurar event listeners globales
+    setupEventListeners();
+    
+    // Ocultar loader cuando todo esté listo
+    const loader = document.querySelector('.loader');
+    if (loader) {
+        setTimeout(() => {
+            loader.style.display = 'none';
+        }, 500);
     }
-};
-
-window.mostrarNotificacion = (mensaje, tipo = 'info') => {
-    const notif = document.createElement('div');
-    notif.className = `alert alert-${tipo}`;
-    notif.textContent = mensaje;
-    notif.style.cssText = `
-        position: fixed;
-        bottom: 20px;
-        right: 20px;
-        z-index: 10000;
-        max-width: 300px;
-        animation: slideInRight 0.3s ease;
-        cursor: pointer;
-        background: white;
-        border-radius: 8px;
-        padding: 12px 20px;
-        box-shadow: 0 2px 10px rgba(0,0,0,0.2);
-    `;
-    notif.onclick = () => notif.remove();
-    document.body.appendChild(notif);
-    setTimeout(() => notif.remove(), 4000);
-};
-
-function initMobileMenu() {
-    const menuToggle = document.getElementById('menuToggle');
-    const sidebar = document.getElementById('sidebar');
-    const overlay = document.getElementById('sidebarOverlay');
-    if (!menuToggle) return;
-    const toggle = () => {
-        sidebar.classList.toggle('active');
-        overlay.classList.toggle('active');
-        document.body.style.overflow = sidebar.classList.contains('active') ? 'hidden' : '';
-    };
-    menuToggle.addEventListener('click', toggle);
-    overlay.addEventListener('click', toggle);
-    document.querySelectorAll('.nav-link').forEach(link => {
-        link.addEventListener('click', () => {
-            if (window.innerWidth <= 768 && sidebar.classList.contains('active')) toggle();
-        });
-    });
 }
 
-document.getElementById('logoutNavLink')?.addEventListener('click', (e) => {
-    e.preventDefault();
-    window.cerrarSesion();
-});
+// Configurar event listeners
+function setupEventListeners() {
+    // Logout
+    const logoutLink = document.getElementById('logoutNavLink');
+    if (logoutLink) {
+        logoutLink.addEventListener('click', async (e) => {
+            e.preventDefault();
+            const { logoutUser } = await import('./auth.js');
+            await logoutUser();
+            navigateTo('inicio');
+        });
+    }
+    
+    // Menu toggle para móviles
+    const menuToggle = document.getElementById('menuToggle');
+    const sidebar = document.getElementById('sidebar');
+    const sidebarOverlay = document.getElementById('sidebarOverlay');
+    
+    if (menuToggle && sidebar && sidebarOverlay) {
+        menuToggle.addEventListener('click', () => {
+            sidebar.classList.add('active');
+            sidebarOverlay.classList.add('active');
+        });
+        
+        sidebarOverlay.addEventListener('click', () => {
+            sidebar.classList.remove('active');
+            sidebarOverlay.classList.remove('active');
+        });
+    }
+}
 
-document.addEventListener('DOMContentLoaded', () => {
-    initMobileMenu();
-});
+// Exportar funciones útiles para otras páginas
+export { listLabs, uploadLab, getDownloadUrl, incrementDownloads };
 
-console.log('✅ App.js cargado');
+// Iniciar la app cuando el DOM esté listo
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initApp);
+} else {
+    initApp();
+}
