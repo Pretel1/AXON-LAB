@@ -1,6 +1,6 @@
 <!-- ============================================ -->
-<!-- PÁGINA: DETALLE DEL LABORATORIO (CORREGIDO)  -->
-<!-- Usa Firestore, descarga real, progreso real  -->
+<!-- PÁGINA: DETALLE DEL LABORATORIO (APPWRITE)   -->
+<!-- Usa Appwrite Storage, descarga real          -->
 <!-- ============================================ -->
 
 <div class="page fade-in" id="detallePage">
@@ -20,12 +20,12 @@
     </div>
 </div>
 
-<script>
-(function() {
-    'use strict';
+<script type="module">
+    import { getDownloadUrl, incrementDownloads } from '../js/labs.js';
+    import { haySesionActiva, obtenerUsuarioActual } from '../js/auth.js';
     
     // ============================================
-    // OBTENER ID DE LABORATORIO (STRING - FIRESTORE)
+    // OBTENER ID DE LABORATORIO
     // ============================================
     function obtenerIdLaboratorio() {
         const hash = window.location.hash;
@@ -43,13 +43,15 @@
     // ============================================
     function getNombreCategoria(categoria) {
         const nombres = {
+            'seguridad_web': '🔒 Seguridad Web',
+            'cryptografia': '🔐 Criptografía',
             'redes': '🌐 Redes',
+            'malware': '🐛 Análisis de Malware',
+            'forensica': '🔍 Forensica Digital',
             'programacion': '💻 Programación',
-            'bases-datos': '🗄️ Bases de Datos',
-            'inteligencia': '🧠 Inteligencia Artificial',
-            'seguridad': '🔒 Seguridad'
+            'ia': '🧠 Inteligencia Artificial'
         };
-        return nombres[categoria] || categoria;
+        return nombres[categoria] || categoria || '📚 General';
     }
     
     // ============================================
@@ -69,7 +71,17 @@
     }
     
     // ============================================
-    // MOSTRAR NOTIFICACIÓN
+    // ESCAPE HTML (SEGURIDAD)
+    // ============================================
+    function escapeHtml(text) {
+        if (!text) return '';
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
+    }
+    
+    // ============================================
+    // MOSTRAR MENSAJE
     // ============================================
     function mostrarMensaje(mensaje, tipo) {
         const el = document.getElementById('mensajeDetalle');
@@ -89,7 +101,6 @@
         const id = obtenerIdLaboratorio();
         const container = document.getElementById('detalleContent');
         
-        // Validar ID
         if (!id) {
             container.innerHTML = `
                 <div style="text-align: center; padding: var(--space-3xl);">
@@ -98,7 +109,7 @@
                     <p style="color: var(--text-muted); margin-top: var(--space-4);">
                         No se especificó un ID de laboratorio válido.
                     </p>
-                    <button onclick="window.cambiarPagina('laboratorios')" class="btn btn-primary" style="margin-top: var(--space-lg);">
+                    <button onclick="window.location.hash='laboratorios'" class="btn btn-primary" style="margin-top: var(--space-lg);">
                         📚 Ver todos los laboratorios
                     </button>
                 </div>
@@ -107,8 +118,9 @@
         }
         
         try {
-            // Obtener laboratorio desde Firestore
-            const lab = await window.obtenerLaboratorioPorId(id);
+            // Obtener laboratorio desde la lista global o desde API
+            // Necesitas pasar el lab como parámetro o tenerlo en memoria
+            const lab = window.laboratorioActual;
             
             if (!lab) {
                 container.innerHTML = `
@@ -118,7 +130,7 @@
                         <p style="color: var(--text-muted); margin-top: var(--space-4);">
                             El laboratorio que buscas no existe o ha sido eliminado.
                         </p>
-                        <button onclick="window.cambiarPagina('laboratorios')" class="btn btn-primary" style="margin-top: var(--space-lg);">
+                        <button onclick="window.location.hash='laboratorios'" class="btn btn-primary" style="margin-top: var(--space-lg);">
                             📚 Ver todos los laboratorios
                         </button>
                     </div>
@@ -126,46 +138,29 @@
                 return;
             }
             
-            // Cargar progreso del usuario (si está logueado)
-            let modulosCompletados = [];
-            let porcentajeGuardado = 0;
-            const user = firebaseAuth.currentUser;
-            
-            if (user) {
-                try {
-                    const progreso = await window.obtenerProgreso(id, user.uid);
-                    modulosCompletados = progreso.modulos || [];
-                    porcentajeGuardado = progreso.porcentaje || 0;
-                } catch (e) {
-                    console.warn('No se pudo cargar progreso:', e);
-                }
-            }
-            
-            const totalModulos = (lab.modulos || []).length;
-            const mostrarModulos = totalModulos > 0;
-            const porcentaje = mostrarModulos ? porcentajeGuardado : 100;
+            const user = obtenerUsuarioActual();
+            const isAuthenticated = haySesionActiva();
             
             // Renderizar HTML
             container.innerHTML = `
-                <div id="mensajeDetalle" style="display: none; margin-bottom: var(--space-md); padding: var(--space-md); border-radius: var(--radius-md);"></div>
+                <div id="mensajeDetalle" style="display: none; margin-bottom: var(--space-md);"></div>
                 
                 <div style="background: var(--bg-card); border-radius: var(--radius-xl); padding: var(--space-xl); border: 1px solid var(--border-color);">
                     
-                    <!-- Cabecera: Categoría y estadísticas -->
+                    <!-- Cabecera -->
                     <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; margin-bottom: var(--space-lg);">
                         <span class="lab-card-category" style="font-size: 1rem; padding: 0.5rem 1rem;">
-                            ${lab.icono || '📚'} ${getNombreCategoria(lab.categoria)}
+                            📚 ${getNombreCategoria(lab.category)}
                         </span>
                         <div style="display: flex; gap: var(--space-md); color: var(--text-muted); font-size: var(--text-sm);">
-                            <span>📥 ${lab.descargas || 0} descargas</span>
-                            <span>👁️ ${lab.vistas || 0} vistas</span>
-                            <span>📅 ${formatearFecha(lab.fecha)}</span>
+                            <span>⬇️ ${lab.downloads || 0} descargas</span>
+                            <span>📅 ${formatearFecha(lab.createdAt)}</span>
                         </div>
                     </div>
                     
                     <!-- Título -->
                     <h1 style="font-size: var(--text-3xl); margin-bottom: var(--space-md); color: var(--text-primary);">
-                        ${escapeHtml(lab.nombre)}
+                        ${escapeHtml(lab.title)}
                     </h1>
                     
                     <!-- Autor -->
@@ -174,77 +169,38 @@
                             👨‍🏫
                         </div>
                         <div>
-                            <div style="font-weight: 600; color: var(--text-primary);">${escapeHtml(lab.autor)}</div>
+                            <div style="font-weight: 600; color: var(--text-primary);">${escapeHtml(lab.userName || lab.userEmail)}</div>
                             <div style="color: var(--text-muted); font-size: var(--text-sm);">Autor(es)</div>
                         </div>
                     </div>
-                    
-                    <!-- Imagen de portada (si existe) -->
-                    ${lab.imagenURL ? `
-                    <div style="margin-bottom: var(--space-xl);">
-                        <img src="${lab.imagenURL}" alt="Portada de ${escapeHtml(lab.nombre)}" style="width: 100%; max-height: 400px; object-fit: cover; border-radius: var(--radius-lg);">
-                    </div>
-                    ` : ''}
                     
                     <!-- Descripción -->
                     <div style="margin-bottom: var(--space-xl);">
                         <h3 style="margin-bottom: var(--space-sm); color: var(--text-primary);">📝 Descripción</h3>
                         <p style="color: var(--text-muted); line-height: 1.6;">
-                            ${escapeHtml(lab.descripcion || 'Sin descripción disponible.')}
+                            ${escapeHtml(lab.description || 'Sin descripción disponible.')}
                         </p>
                     </div>
                     
-                    ${mostrarModulos ? `
-                    <!-- Módulos y Progreso -->
-                    <div style="margin-bottom: var(--space-xl);">
-                        <h3 style="margin-bottom: var(--space-sm); color: var(--text-primary);">📚 Módulos del Laboratorio</h3>
-                        <div id="modulosLista" style="display: flex; flex-direction: column; gap: var(--space-sm);">
-                            ${lab.modulos.map((modulo, index) => `
-                                <div class="modulo-item" style="display: flex; align-items: center; gap: var(--space-md); padding: var(--space-sm) var(--space-md); background: rgba(255,255,255,0.03); border-radius: var(--radius-md); transition: background 0.2s;">
-                                    <input type="checkbox" 
-                                           id="mod_${index}" 
-                                           data-modulo="${escapeHtml(modulo)}" 
-                                           ${modulosCompletados.includes(modulo) ? 'checked' : ''}
-                                           style="width: 20px; height: 20px; cursor: pointer; accent-color: var(--color-primary);">
-                                    <label for="mod_${index}" style="cursor: pointer; flex: 1; color: var(--text-secondary);">
-                                        ${escapeHtml(modulo)}
-                                    </label>
-                                </div>
-                            `).join('')}
-                        </div>
-                    </div>
-                    
-                    <!-- Barra de progreso -->
-                    <div style="margin-bottom: var(--space-xl);">
-                        <h3 style="margin-bottom: var(--space-sm); color: var(--text-primary);">📊 Tu Progreso</h3>
-                        <div style="background: rgba(255,255,255,0.1); border-radius: var(--radius-full); height: 24px; overflow: hidden;">
-                            <div id="progressFill" style="width: ${porcentaje}%; height: 100%; background: linear-gradient(90deg, var(--color-primary), var(--color-secondary)); transition: width 0.3s ease; display: flex; align-items: center; justify-content: center; color: white; font-size: var(--text-xs); font-weight: bold;">
-                                ${porcentaje}%
-                            </div>
-                        </div>
-                        <p id="progressText" style="margin-top: var(--space-sm); color: var(--text-muted); text-align: center; font-size: var(--text-sm);">
-                            ${modulosCompletados.length} de ${totalModulos} módulos completados
+                    <!-- Información del archivo -->
+                    <div style="margin-bottom: var(--space-xl); padding: var(--space-md); background: rgba(0,245,255,0.05); border-radius: var(--radius-lg);">
+                        <h3 style="margin-bottom: var(--space-sm); color: var(--text-primary);">📄 Información del archivo</h3>
+                        <p style="color: var(--text-muted);">
+                            <strong>Nombre:</strong> ${escapeHtml(lab.fileName)}<br>
+                            <strong>Tamaño:</strong> ${(lab.fileSize / 1024).toFixed(2)} KB<br>
+                            <strong>Tipo:</strong> ${lab.fileType || 'Desconocido'}
                         </p>
                     </div>
-                    ` : ''}
                     
                     <!-- Botones de acción -->
                     <div style="display: flex; gap: var(--space-md); flex-wrap: wrap; justify-content: center;">
-                        ${lab.archivoURL ? `
                         <button id="descargarBtn" class="btn btn-primary" style="display: inline-flex; align-items: center; gap: var(--space-2);">
                             📥 Descargar Laboratorio
                         </button>
-                        ` : '<p style="color: var(--text-muted);">⚠️ No hay archivo adjunto disponible</p>'}
                         
-                        ${mostrarModulos && user ? `
-                        <button id="guardarProgresoBtn" class="btn btn-secondary" style="display: inline-flex; align-items: center; gap: var(--space-2);">
-                            💾 Guardar Progreso
-                        </button>
-                        ` : ''}
-                        
-                        ${mostrarModulos && !user ? `
-                        <p style="color: var(--text-muted); font-size: var(--text-sm);">
-                            🔐 <a href="#login" style="color: var(--color-primary);">Inicia sesión</a> para guardar tu progreso
+                        ${!isAuthenticated ? `
+                        <p style="color: var(--text-muted); font-size: var(--text-sm); width: 100%; text-align: center;">
+                            🔐 <a href="#login" style="color: var(--color-primary);">Inicia sesión</a> para más funcionalidades
                         </p>
                         ` : ''}
                     </div>
@@ -252,27 +208,40 @@
             `;
             
             // ============================================
-            // EVENTO: DESCARGA REAL
+            // EVENTO: DESCARGA REAL DESDE APPWRITE STORAGE
             // ============================================
             const descargarBtn = document.getElementById('descargarBtn');
-            if (descargarBtn && lab.archivoURL) {
+            if (descargarBtn && lab.fileId) {
                 descargarBtn.addEventListener('click', async () => {
                     descargarBtn.disabled = true;
                     descargarBtn.innerHTML = '⏳ Preparando descarga...';
                     
                     try {
-                        // Crear enlace de descarga real
-                        const link = document.createElement('a');
-                        link.href = lab.archivoURL;
-                        link.download = lab.archivoNombre || 'laboratorio';
-                        link.target = '_blank';
-                        document.body.appendChild(link);
-                        link.click();
-                        document.body.removeChild(link);
+                        // Obtener URL de descarga desde Appwrite Storage
+                        const url = await getDownloadUrl(lab.fileId);
                         
-                        // Incrementar contador de descargas
-                        await window.incrementarDescargas(id);
-                        mostrarMensaje('✅ Descarga iniciada correctamente', 'success');
+                        if (url) {
+                            // Crear enlace de descarga
+                            const link = document.createElement('a');
+                            link.href = url;
+                            link.download = lab.fileName || 'laboratorio';
+                            link.target = '_blank';
+                            document.body.appendChild(link);
+                            link.click();
+                            document.body.removeChild(link);
+                            
+                            // Incrementar contador de descargas
+                            await incrementDownloads(lab.$id, lab.downloads || 0);
+                            mostrarMensaje('✅ Descarga iniciada correctamente', 'success');
+                            
+                            // Actualizar contador visualmente
+                            const descargasSpan = document.querySelector('.lab-card-stats span:first-child');
+                            if (descargasSpan) {
+                                descargasSpan.innerHTML = `⬇️ ${(lab.downloads || 0) + 1} descargas`;
+                            }
+                        } else {
+                            mostrarMensaje('❌ Error al obtener el archivo', 'error');
+                        }
                         
                     } catch (error) {
                         console.error('Error en descarga:', error);
@@ -284,85 +253,6 @@
                 });
             }
             
-            // ============================================
-            // EVENTO: GUARDAR PROGRESO
-            // ============================================
-            const guardarBtn = document.getElementById('guardarProgresoBtn');
-            if (guardarBtn) {
-                guardarBtn.addEventListener('click', async () => {
-                    const userActual = firebaseAuth.currentUser;
-                    if (!userActual) {
-                        mostrarMensaje('⚠️ Debes iniciar sesión para guardar tu progreso', 'warning');
-                        return;
-                    }
-                    
-                    guardarBtn.disabled = true;
-                    guardarBtn.innerHTML = '⏳ Guardando...';
-                    
-                    try {
-                        const checkboxes = document.querySelectorAll('#modulosLista input[type="checkbox"]');
-                        const completados = Array.from(checkboxes)
-                            .filter(cb => cb.checked)
-                            .map(cb => cb.getAttribute('data-modulo'));
-                        
-                        const result = await window.guardarProgreso(id, completados);
-                        
-                        if (result.success) {
-                            const pct = result.porcentaje;
-                            const progressFill = document.getElementById('progressFill');
-                            const progressText = document.getElementById('progressText');
-                            const total = completados.length;
-                            const totalModulosCount = lab.modulos?.length || 1;
-                            
-                            if (progressFill) {
-                                progressFill.style.width = pct + '%';
-                                progressFill.textContent = pct + '%';
-                            }
-                            if (progressText) {
-                                progressText.textContent = `${total} de ${totalModulosCount} módulos completados`;
-                            }
-                            
-                            mostrarMensaje(`✅ Progreso guardado: ${pct}% completado`, 'success');
-                        } else {
-                            mostrarMensaje('❌ ' + result.message, 'error');
-                        }
-                    } catch (error) {
-                        console.error('Error guardando progreso:', error);
-                        mostrarMensaje('❌ Error al guardar el progreso', 'error');
-                    } finally {
-                        guardarBtn.disabled = false;
-                        guardarBtn.innerHTML = '💾 Guardar Progreso';
-                    }
-                });
-            }
-            
-            // ============================================
-            // ACTUALIZAR BARRA DE PROGRESO AL MARCAR CHECKBOX
-            // ============================================
-            if (mostrarModulos) {
-                const checkboxes = document.querySelectorAll('#modulosLista input[type="checkbox"]');
-                const progressFill = document.getElementById('progressFill');
-                const progressText = document.getElementById('progressText');
-                const totalModulosCount = lab.modulos?.length || 1;
-                
-                const actualizarBarraProgreso = () => {
-                    const checks = document.querySelectorAll('#modulosLista input[type="checkbox"]');
-                    const completados = Array.from(checks).filter(cb => cb.checked).length;
-                    const pct = Math.round((completados / totalModulosCount) * 100);
-                    if (progressFill) {
-                        progressFill.style.width = pct + '%';
-                        progressFill.textContent = pct + '%';
-                    }
-                    if (progressText) {
-                        progressText.textContent = `${completados} de ${totalModulosCount} módulos completados`;
-                    }
-                };
-                
-                checkboxes.forEach(cb => {
-                    cb.addEventListener('change', actualizarBarraProgreso);
-                });
-            }
-            
         } catch (error) {
             console.error('Error al cargar detalle:', error);
             container.innerHTML = `
@@ -370,7 +260,7 @@
                     <span style="font-size: 4rem;">❌</span>
                     <h2 style="margin-top: var(--space-4);">Error al cargar</h2>
                     <p style="color: var(--text-muted); margin-top: var(--space-4);">${error.message}</p>
-                    <button onclick="window.cambiarPagina('laboratorios')" class="btn btn-primary" style="margin-top: var(--space-lg);">
+                    <button onclick="window.location.hash='laboratorios'" class="btn btn-primary" style="margin-top: var(--space-lg);">
                         📚 Volver a laboratorios
                     </button>
                 </div>
@@ -379,41 +269,12 @@
     }
     
     // ============================================
-    // ESCAPE HTML (SEGURIDAD)
-    // ============================================
-    function escapeHtml(text) {
-        if (!text) return '';
-        const div = document.createElement('div');
-        div.textContent = text;
-        return div.innerHTML;
-    }
-    
-    // ============================================
     // BOTÓN VOLVER
     // ============================================
     document.getElementById('backBtn')?.addEventListener('click', () => {
-        if (typeof window.cambiarPagina === 'function') {
-            window.cambiarPagina('laboratorios');
-        } else {
-            window.location.hash = '#laboratorios';
-        }
-    });
-    
-    // ============================================
-    // ESCUCHAR CAMBIOS DE AUTENTICACIÓN
-    // ============================================
-    let recargandoPorAuth = false;
-    document.addEventListener('authChanged', () => {
-        if (!recargandoPorAuth) {
-            recargandoPorAuth = true;
-            setTimeout(() => {
-                cargarDetalle();
-                recargandoPorAuth = false;
-            }, 100);
-        }
+        window.location.hash = 'laboratorios';
     });
     
     // Inicializar
     cargarDetalle();
-})();
 </script>
