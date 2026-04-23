@@ -81,7 +81,7 @@
     }
     
     // ============================================
-    // MOSTRAR MENSAJE
+    // MOSTRAR NOTIFICACIÓN
     // ============================================
     function mostrarMensaje(mensaje, tipo) {
         const el = document.getElementById('mensajeDetalle');
@@ -101,6 +101,7 @@
         const id = obtenerIdLaboratorio();
         const container = document.getElementById('detalleContent');
         
+        // Validar ID
         if (!id) {
             container.innerHTML = `
                 <div style="text-align: center; padding: var(--space-3xl);">
@@ -118,11 +119,10 @@
         }
         
         try {
-            // Obtener laboratorio desde la lista global o desde API
-            // Necesitas pasar el lab como parámetro o tenerlo en memoria
+            // Obtener laboratorio desde window.laboratorioActual (pasado desde laboratorios.html)
             const lab = window.laboratorioActual;
             
-            if (!lab) {
+            if (!lab || lab.$id !== id) {
                 container.innerHTML = `
                     <div style="text-align: center; padding: var(--space-3xl);">
                         <span style="font-size: 4rem;">❌</span>
@@ -138,8 +138,9 @@
                 return;
             }
             
-            const user = obtenerUsuarioActual();
             const isAuthenticated = haySesionActiva();
+            const currentUser = obtenerUsuarioActual();
+            const isOwner = currentUser && (currentUser.id === lab.userId || currentUser.email === lab.userEmail);
             
             // Renderizar HTML
             container.innerHTML = `
@@ -147,7 +148,7 @@
                 
                 <div style="background: var(--bg-card); border-radius: var(--radius-xl); padding: var(--space-xl); border: 1px solid var(--border-color);">
                     
-                    <!-- Cabecera -->
+                    <!-- Cabecera: Categoría y estadísticas -->
                     <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; margin-bottom: var(--space-lg);">
                         <span class="lab-card-category" style="font-size: 1rem; padding: 0.5rem 1rem;">
                             📚 ${getNombreCategoria(lab.category)}
@@ -199,16 +200,22 @@
                         </button>
                         
                         ${!isAuthenticated ? `
-                        <p style="color: var(--text-muted); font-size: var(--text-sm); width: 100%; text-align: center;">
-                            🔐 <a href="#login" style="color: var(--color-primary);">Inicia sesión</a> para más funcionalidades
-                        </p>
+                            <p style="color: var(--text-muted); font-size: var(--text-sm); width: 100%; text-align: center;">
+                                🔐 <a href="#login" style="color: var(--color-primary);">Inicia sesión</a> para más funcionalidades
+                            </p>
+                        ` : ''}
+                        
+                        ${isOwner ? `
+                            <button id="eliminarBtn" class="btn btn-error" style="display: inline-flex; align-items: center; gap: var(--space-2);">
+                                🗑️ Eliminar Laboratorio
+                            </button>
                         ` : ''}
                     </div>
                 </div>
             `;
             
             // ============================================
-            // EVENTO: DESCARGA REAL DESDE APPWRITE STORAGE
+            // EVENTO: DESCARGA DESDE APPWRITE STORAGE
             // ============================================
             const descargarBtn = document.getElementById('descargarBtn');
             if (descargarBtn && lab.fileId) {
@@ -217,11 +224,9 @@
                     descargarBtn.innerHTML = '⏳ Preparando descarga...';
                     
                     try {
-                        // Obtener URL de descarga desde Appwrite Storage
                         const url = await getDownloadUrl(lab.fileId);
                         
                         if (url) {
-                            // Crear enlace de descarga
                             const link = document.createElement('a');
                             link.href = url;
                             link.download = lab.fileName || 'laboratorio';
@@ -235,10 +240,11 @@
                             mostrarMensaje('✅ Descarga iniciada correctamente', 'success');
                             
                             // Actualizar contador visualmente
-                            const descargasSpan = document.querySelector('.lab-card-stats span:first-child');
+                            const descargasSpan = document.querySelector('.lab-card-category + div span:first-child');
                             if (descargasSpan) {
                                 descargasSpan.innerHTML = `⬇️ ${(lab.downloads || 0) + 1} descargas`;
                             }
+                            lab.downloads = (lab.downloads || 0) + 1;
                         } else {
                             mostrarMensaje('❌ Error al obtener el archivo', 'error');
                         }
@@ -249,6 +255,34 @@
                     } finally {
                         descargarBtn.disabled = false;
                         descargarBtn.innerHTML = '📥 Descargar Laboratorio';
+                    }
+                });
+            }
+            
+            // ============================================
+            // EVENTO: ELIMINAR LABORATORIO
+            // ============================================
+            const eliminarBtn = document.getElementById('eliminarBtn');
+            if (eliminarBtn) {
+                eliminarBtn.addEventListener('click', async () => {
+                    const confirmar = confirm('¿Estás seguro de que quieres eliminar este laboratorio? Esta acción no se puede deshacer.');
+                    if (!confirmar) return;
+                    
+                    eliminarBtn.disabled = true;
+                    eliminarBtn.innerHTML = '⏳ Eliminando...';
+                    
+                    const { deleteLab } = await import('../js/labs.js');
+                    const result = await deleteLab(lab.$id, lab.fileId, lab.userId);
+                    
+                    if (result.success) {
+                        mostrarMensaje('✅ Laboratorio eliminado correctamente', 'success');
+                        setTimeout(() => {
+                            window.location.hash = 'laboratorios';
+                        }, 1500);
+                    } else {
+                        mostrarMensaje(`❌ Error: ${result.error}`, 'error');
+                        eliminarBtn.disabled = false;
+                        eliminarBtn.innerHTML = '🗑️ Eliminar Laboratorio';
                     }
                 });
             }
