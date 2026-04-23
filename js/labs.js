@@ -1,72 +1,197 @@
-// js/labs.js
-function initLabs() {
-    if (!localStorage.getItem('laboratorios')) {
-        // Datos de ejemplo con imagen URL y enlace de OneDrive
-        const labsEjemplo = [
-            {
-                id: 1,
-                nombre: "Introducción a Redes",
-                autor: "Dr. Gómez",
-                categoria: "Redes",
-                imagenUrl: "https://picsum.photos/id/1/300/200",
-                archivoUrl: "https://onedrive.live.com/ejemplo1",
-                ownerId: null,
-                ownerNombre: "Admin"
-            },
-            {
-                id: 2,
-                nombre: "Programación en Java",
-                autor: "Ing. López",
-                categoria: "Programación",
-                imagenUrl: "https://picsum.photos/id/2/300/200",
-                archivoUrl: "https://onedrive.live.com/ejemplo2",
-                ownerId: null,
-                ownerNombre: "Admin"
-            }
-        ];
-        localStorage.setItem('laboratorios', JSON.stringify(labsEjemplo));
+// js/labs.js - Versión completa con Appwrite
+import { storage, databases, ID, DATABASE_ID, LABS_COLLECTION_ID, DOCUMENTS_BUCKET_ID } from './appwrite-config.js';
+
+// Variable para el usuario actual (se actualiza desde auth)
+let currentUser = null;
+
+// Función para actualizar el usuario actual
+export function setCurrentUser(user) {
+    currentUser = user;
+}
+
+// ============================================
+// SUBIR LABORATORIO
+// ============================================
+export async function uploadLab(file, title, description, category) {
+    if (!currentUser) {
+        return { success: false, error: 'Debes iniciar sesión para subir laboratorios' };
+    }
+    
+    try {
+        // Validar archivo
+        if (!file) {
+            return { success: false, error: 'No se seleccionó ningún archivo' };
+        }
+        
+        // Validar tamaño (10MB)
+        if (file.size > 10 * 1024 * 1024) {
+            return { success: false, error: 'El archivo no debe superar los 10MB' };
+        }
+        
+        // 1. Subir archivo a Storage
+        const fileResponse = await storage.createFile(
+            DOCUMENTS_BUCKET_ID,
+            ID.unique(),
+            file
+        );
+        
+        // 2. Guardar metadatos en la base de datos
+        const metadata = {
+            title: title,
+            description: description,
+            category: category,
+            fileId: fileResponse.$id,
+            fileName: file.name,
+            fileSize: file.size,
+            fileType: file.type,
+            userId: currentUser.$id,
+            userEmail: currentUser.email,
+            userName: currentUser.name || currentUser.email,
+            createdAt: new Date().toISOString(),
+            downloads: 0
+        };
+        
+        const dbResponse = await databases.createDocument(
+            DATABASE_ID,
+            LABS_COLLECTION_ID,
+            ID.unique(),
+            metadata
+        );
+        
+        console.log('✅ Laboratorio subido:', dbResponse);
+        return { success: true, file: fileResponse, metadata: dbResponse };
+        
+    } catch (error) {
+        console.error('Error al subir:', error);
+        return { success: false, error: error.message };
     }
 }
 
-window.obtenerLaboratorios = () => JSON.parse(localStorage.getItem('laboratorios')) || [];
+// ============================================
+// LISTAR LABORATORIOS
+// ============================================
+export async function listLabs(category = null) {
+    try {
+        let queries = [];
+        
+        if (category && category !== 'todos' && category !== '') {
+            queries.push(`category="${category}"`);
+        }
+        
+        // Ordenar por fecha más reciente
+        queries.push('orderDesc("createdAt")');
+        
+        const response = await databases.listDocuments(
+            DATABASE_ID,
+            LABS_COLLECTION_ID,
+            queries
+        );
+        
+        return { success: true, labs: response.documents };
+        
+    } catch (error) {
+        console.error('Error al listar laboratorios:', error);
+        return { success: false, error: error.message, labs: [] };
+    }
+}
 
-window.agregarLaboratorio = (nombre, autor, categoria, imagenUrl, archivoUrl) => {
-    const user = window.obtenerUsuarioActual();
-    if (!user) return { success: false, message: 'Debes iniciar sesión' };
-    const labs = window.obtenerLaboratorios();
-    const nuevoId = labs.length > 0 ? Math.max(...labs.map(l => l.id)) + 1 : 1;
-    const nuevoLab = {
-        id: nuevoId,
-        nombre: nombre.trim(),
-        autor: autor.trim(),
-        categoria: categoria,
-        imagenUrl: imagenUrl.trim() || "https://picsum.photos/id/20/300/200", // imagen por defecto
-        archivoUrl: archivoUrl.trim(),
-        ownerId: user.id,
-        ownerNombre: user.nombre,
-        fecha: new Date().toISOString()
-    };
-    labs.push(nuevoLab);
-    localStorage.setItem('laboratorios', JSON.stringify(labs));
-    return { success: true, message: 'Laboratorio agregado' };
-};
+// ============================================
+// OBTENER LABORATORIO POR ID
+// ============================================
+export async function getLabById(labId) {
+    try {
+        const response = await databases.getDocument(
+            DATABASE_ID,
+            LABS_COLLECTION_ID,
+            labId
+        );
+        return { success: true, lab: response };
+    } catch (error) {
+        console.error('Error al obtener laboratorio:', error);
+        return { success: false, error: error.message };
+    }
+}
 
-window.eliminarLaboratorio = (id) => {
-    const user = window.obtenerUsuarioActual();
-    if (!user) return { success: false, message: 'No autorizado' };
-    let labs = window.obtenerLaboratorios();
-    const lab = labs.find(l => l.id === id);
-    if (!lab) return { success: false, message: 'Laboratorio no encontrado' };
-    if (lab.ownerId !== user.id) return { success: false, message: 'Solo el dueño puede eliminar' };
-    labs = labs.filter(l => l.id !== id);
-    localStorage.setItem('laboratorios', JSON.stringify(labs));
-    return { success: true, message: 'Laboratorio eliminado' };
-};
+// ============================================
+// OBTENER URL DE DESCARGA
+// ============================================
+export async function getDownloadUrl(fileId) {
+    try {
+        const url = storage.getFileView(DOCUMENTS_BUCKET_ID, fileId);
+        return url;
+    } catch (error) {
+        console.error('Error al obtener URL:', error);
+        return null;
+    }
+}
 
-window.visualizarArchivo = (url) => {
-    if (url && url !== '#') window.open(url, '_blank');
-    else window.mostrarNotificacion('Enlace no disponible', 'error');
-};
+// ============================================
+// INCREMENTAR CONTADOR DE DESCARGAS
+// ============================================
+export async function incrementDownloads(labId, currentDownloads) {
+    try {
+        const response = await databases.updateDocument(
+            DATABASE_ID,
+            LABS_COLLECTION_ID,
+            labId,
+            { downloads: (currentDownloads || 0) + 1 }
+        );
+        return response;
+    } catch (error) {
+        console.error('Error al actualizar descargas:', error);
+        return null;
+    }
+}
 
-initLabs();
-console.log('✅ Labs.js cargado (con imágenes y eliminación)');
+// ============================================
+// ELIMINAR LABORATORIO
+// ============================================
+export async function deleteLab(labId, fileId, userId) {
+    if (!currentUser) {
+        return { success: false, error: 'Debes iniciar sesión para eliminar laboratorios' };
+    }
+    
+    // Verificar permisos (solo el dueño puede eliminar)
+    if (currentUser.$id !== userId && currentUser.email !== userId) {
+        return { success: false, error: 'No tienes permisos para eliminar este laboratorio' };
+    }
+    
+    try {
+        // Eliminar de la base de datos
+        await databases.deleteDocument(DATABASE_ID, LABS_COLLECTION_ID, labId);
+        
+        // Eliminar archivo del storage
+        await storage.deleteFile(DOCUMENTS_BUCKET_ID, fileId);
+        
+        console.log('✅ Laboratorio eliminado:', labId);
+        return { success: true };
+        
+    } catch (error) {
+        console.error('Error al eliminar:', error);
+        return { success: false, error: error.message };
+    }
+}
+
+// ============================================
+// FUNCIONES PARA COMPATIBILIDAD (si es necesario)
+// ============================================
+export function obtenerLaboratorios() {
+    console.warn('obtenerLaboratorios está obsoleto. Usa listLabs() en su lugar.');
+    return [];
+}
+
+export function agregarLaboratorio() {
+    console.warn('agregarLaboratorio está obsoleto. Usa uploadLab() en su lugar.');
+    return { success: false, message: 'Función obsoleta. Usa uploadLab()' };
+}
+
+export function eliminarLaboratorio() {
+    console.warn('eliminarLaboratorio está obsoleto. Usa deleteLab() en su lugar.');
+    return { success: false, message: 'Función obsoleta. Usa deleteLab()' };
+}
+
+export function visualizarArchivo() {
+    console.warn('visualizarArchivo está obsoleto. Usa getDownloadUrl() en su lugar.');
+}
+
+console.log('✅ Labs.js cargado con Appwrite');
