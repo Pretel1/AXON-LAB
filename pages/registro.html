@@ -1,30 +1,86 @@
 <div class="form-card">
     <h2>📝 Registrarse</h2>
+    <p>Crea tu cuenta en AXON-LAB</p>
+    
     <form id="formRegistro">
-        <div class="form-group"><label>Nombre completo</label><input type="text" id="regNombre" required></div>
-        <div class="form-group"><label>Correo electrónico</label><input type="email" id="regEmail" required></div>
-        <div class="form-group"><label>Contraseña</label><input type="password" id="regPassword" required minlength="6"></div>
-        <div class="form-group"><label>Confirmar contraseña</label><input type="password" id="regConfirm" required></div>
-        <button type="submit" class="btn">Registrarse</button>
+        <div class="form-group">
+            <label class="form-label required">Nombre completo</label>
+            <input type="text" id="regNombre" class="form-input" placeholder="Ej: Juan Pérez" required>
+        </div>
+        
+        <div class="form-group">
+            <label class="form-label required">Correo electrónico</label>
+            <input type="email" id="regEmail" class="form-input" placeholder="ejemplo@correo.com" required>
+        </div>
+        
+        <div class="form-group">
+            <label class="form-label required">Contraseña</label>
+            <input type="password" id="regPassword" class="form-input" placeholder="Mínimo 8 caracteres" required>
+            <small class="form-help">🔒 La contraseña debe tener al menos 8 caracteres</small>
+        </div>
+        
+        <div class="form-group">
+            <label class="form-label required">Confirmar contraseña</label>
+            <input type="password" id="regConfirm" class="form-input" placeholder="Repite tu contraseña" required>
+        </div>
+        
+        <button type="submit" class="btn btn-primary">📝 Registrarse</button>
         <div id="msgRegistro"></div>
     </form>
-    <p>¿Ya tienes cuenta? <a href="#" onclick="window.cambiarPagina('login'); return false;">Inicia sesión aquí</a></p>
+    
+    <p>¿Ya tienes cuenta? <a href="#" onclick="window.location.hash='login'; return false;">Inicia sesión aquí</a></p>
 </div>
-<script>
-    document.getElementById('formRegistro').addEventListener('submit', (e) => {
+
+<script type="module">
+    import { registrarUsuario } from '../js/auth.js';
+    
+    const form = document.getElementById('formRegistro');
+    const msgDiv = document.getElementById('msgRegistro');
+    
+    form.addEventListener('submit', async (e) => {
         e.preventDefault();
+        
         const nombre = document.getElementById('regNombre').value.trim();
         const email = document.getElementById('regEmail').value.trim();
-        const pass = document.getElementById('regPassword').value;
+        const password = document.getElementById('regPassword').value;
         const confirm = document.getElementById('regConfirm').value;
-        if (pass !== confirm) return window.mostrarNotificacion('Las contraseñas no coinciden', 'error');
-        const result = window.registrarUsuario(nombre, email, pass);
-        const msgDiv = document.getElementById('msgRegistro');
+        
+        // Validar campos
+        if (!nombre || !email || !password || !confirm) {
+            msgDiv.innerHTML = '<div class="alert alert-error">⚠️ Completa todos los campos</div>';
+            return;
+        }
+        
+        // Validar contraseñas
+        if (password !== confirm) {
+            msgDiv.innerHTML = '<div class="alert alert-error">⚠️ Las contraseñas no coinciden</div>';
+            return;
+        }
+        
+        // Validar longitud (Appwrite requiere mínimo 8 caracteres)
+        if (password.length < 8) {
+            msgDiv.innerHTML = '<div class="alert alert-error">⚠️ La contraseña debe tener al menos 8 caracteres</div>';
+            return;
+        }
+        
+        // Deshabilitar botón durante el registro
+        const btn = form.querySelector('button');
+        const originalText = btn.textContent;
+        btn.textContent = '⏳ Registrando...';
+        btn.disabled = true;
+        
+        const result = await registrarUsuario(nombre, email, password);
+        
         if (result.success) {
-            msgDiv.innerHTML = `<div class="alert alert-success">${result.message}</div>`;
-            setTimeout(() => window.cambiarPagina('login'), 1500);
+            msgDiv.innerHTML = `<div class="alert alert-success">✅ ${result.message}</div>`;
+            form.reset();
+            setTimeout(() => {
+                window.location.hash = 'login';
+            }, 1500);
         } else {
-            msgDiv.innerHTML = `<div class="alert alert-error">${result.message}</div>`;
+            msgDiv.innerHTML = `<div class="alert alert-error">❌ ${result.message}</div>`;
+            btn.textContent = originalText;
+            btn.disabled = false;
         }
     });
 </script>
