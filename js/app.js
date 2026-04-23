@@ -1,5 +1,6 @@
-// js/app.js - Versión minimalista que funciona
-import { initAuth, haySesionActiva, obtenerUsuarioActual } from './auth.js';
+// js/app.js - Versión corregida
+import { initAuth, haySesionActiva, obtenerUsuarioActual, cerrarSesion } from './auth.js';
+import { listLabs, uploadLab, getDownloadUrl, incrementDownloads, deleteLab } from './labs.js';
 
 // Variables globales
 let paginaActual = 'inicio';
@@ -22,14 +23,6 @@ function hideLoader() {
     if (loader) {
         loader.style.display = 'none';
         console.log('✅ Loader ocultado');
-    }
-}
-
-// Función para mostrar loader
-function showLoader() {
-    const contentDiv = document.getElementById('page-content');
-    if (contentDiv) {
-        contentDiv.innerHTML = '<div class="loader"><div class="loader-spinner"></div></div>';
     }
 }
 
@@ -84,7 +77,6 @@ async function loadPage(page) {
 // Ejecutar scripts específicos según la página
 async function executePageScripts(page) {
     if (page === 'login') {
-        // Inicializar formulario de login
         const form = document.getElementById('formLogin');
         if (form) {
             const { iniciarSesion, iniciarSesionConGoogle } = await import('./auth.js');
@@ -98,17 +90,15 @@ async function executePageScripts(page) {
                 const result = await iniciarSesion(email, password);
                 if (result.success) {
                     msgDiv.innerHTML = `<div class="alert alert-success">${result.message}</div>`;
+                    actualizarUI();
                     setTimeout(() => {
                         window.location.hash = 'inicio';
-                        loadPage('inicio');
-                        actualizarUI();
                     }, 1500);
                 } else {
                     msgDiv.innerHTML = `<div class="alert alert-error">${result.message}</div>`;
                 }
             });
             
-            // Botón de Google
             const googleBtn = document.getElementById('googleLoginBtn');
             if (googleBtn) {
                 googleBtn.addEventListener('click', () => iniciarSesionConGoogle());
@@ -128,13 +118,16 @@ async function executePageScripts(page) {
                 const password = document.getElementById('regPassword')?.value;
                 const msgDiv = document.getElementById('msgRegistro');
                 
+                if (password.length < 8) {
+                    msgDiv.innerHTML = '<div class="alert alert-error">⚠️ La contraseña debe tener al menos 8 caracteres</div>';
+                    return;
+                }
+                
                 const result = await registrarUsuario(nombre, email, password);
                 if (result.success) {
                     msgDiv.innerHTML = `<div class="alert alert-success">${result.message}</div>`;
                     setTimeout(() => {
-                        window.location.hash = 'inicio';
-                        loadPage('inicio');
-                        actualizarUI();
+                        window.location.hash = 'login';
                     }, 1500);
                 } else {
                     msgDiv.innerHTML = `<div class="alert alert-error">${result.message}</div>`;
@@ -144,42 +137,117 @@ async function executePageScripts(page) {
     }
     
     if (page === 'laboratorios') {
-        const { listLabs, getDownloadUrl, incrementDownloads } = await import('./labs.js');
-        const container = document.getElementById('listaLaboratorios');
-        if (container) {
+        // Esperar a que el DOM de la página esté listo
+        setTimeout(async () => {
+            const container = document.getElementById('listaLaboratorios');
+            if (!container) return;
+            
+            container.innerHTML = '<div class="loader"><div class="loader-spinner"></div></div>';
+            
             const result = await listLabs();
+            console.log('Laboratorios cargados:', result);
+            
             if (result.success && result.labs.length > 0) {
+                const currentUser = obtenerUsuarioActual();
+                
                 container.innerHTML = result.labs.map(lab => `
-                    <div class="lab-card">
+                    <div class="lab-card" data-id="${lab.$id}">
                         <div class="lab-card-content">
-                            <span class="lab-card-category">${lab.category}</span>
-                            <h3 class="lab-card-title">${lab.title}</h3>
-                            <p class="lab-card-author">📧 ${lab.userEmail}</p>
-                            <p class="lab-card-description">${lab.description.substring(0, 100)}...</p>
+                            <span class="lab-card-category">📁 ${lab.category || 'Sin categoría'}</span>
+                            <h3 class="lab-card-title">${escapeHtml(lab.title)}</h3>
+                            <p class="lab-card-author">👤 ${escapeHtml(lab.userName || lab.userEmail)}</p>
+                            <p class="lab-card-description">${escapeHtml(lab.description?.substring(0, 120) || 'Sin descripción')}...</p>
                             <div class="lab-card-stats">
                                 <span>📅 ${new Date(lab.createdAt).toLocaleDateString()}</span>
-                                <span>⬇️ ${lab.downloads} descargas</span>
+                                <span>⬇️ ${lab.downloads || 0} descargas</span>
                             </div>
-                            <button class="btn btn-sm btn-primary" data-fileid="${lab.fileId}" data-docid="${lab.$id}" data-downloads="${lab.downloads}">
-                                📥 Descargar
-                            </button>
+                            <div class="btn-group" style="display: flex; gap: 0.5rem; margin-top: 1rem;">
+                                <button class="btn btn-sm btn-primary ver-detalle-btn" data-lab='${JSON.stringify(lab).replace(/'/g, "\\'")}'>
+                                    👁️ Ver detalles
+                                </button>
+                                <button class="btn btn-sm btn-success descargar-btn" data-fileid="${lab.fileId}" data-docid="${lab.$id}" data-downloads="${lab.downloads || 0}">
+                                    📥 Descargar
+                                </button>
+                            </div>
                         </div>
                     </div>
                 `).join('');
                 
-                // Agregar eventos a botones de descarga
-                document.querySelectorAll('[data-fileid]').forEach(btn => {
-                    btn.addEventListener('click', async () => {
+                // Eventos de ver detalles
+                document.querySelectorAll('.ver-detalle-btn').forEach(btn => {
+                    btn.addEventListener('click', () => {
+                        const lab = JSON.parse(btn.dataset.lab);
+                        window.laboratorioActual = lab;
+                        window.location.hash = `detalle?id=${lab.$id}`;
+                    });
+                });
+                
+                // Eventos de descarga
+                document.querySelectorAll('.descargar-btn').forEach(btn => {
+                    btn.addEventListener('click', async (e) => {
+                        e.stopPropagation();
                         const fileId = btn.dataset.fileid;
+                        const docId = btn.dataset.docid;
+                        const downloads = parseInt(btn.dataset.downloads);
+                        
                         const url = await getDownloadUrl(fileId);
-                        if (url) window.open(url, '_blank');
+                        if (url) {
+                            window.open(url, '_blank');
+                            await incrementDownloads(docId, downloads);
+                            btn.dataset.downloads = downloads + 1;
+                        }
                     });
                 });
             } else {
                 container.innerHTML = '<p>No hay laboratorios disponibles.</p>';
             }
+        }, 100);
+    }
+    
+    if (page === 'subir') {
+        const form = document.getElementById('formSubir');
+        if (form) {
+            form.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                const titulo = document.getElementById('labNombre')?.value;
+                const descripcion = document.getElementById('labDescripcion')?.value;
+                const categoria = document.getElementById('labCategoria')?.value;
+                const archivo = document.getElementById('labArchivo')?.files[0];
+                const msgDiv = document.getElementById('msgSubir');
+                
+                if (!archivo) {
+                    msgDiv.innerHTML = '<div class="alert alert-error">Selecciona un archivo</div>';
+                    return;
+                }
+                
+                const btn = form.querySelector('button');
+                const originalText = btn.textContent;
+                btn.textContent = '⏳ Subiendo...';
+                btn.disabled = true;
+                
+                const result = await uploadLab(archivo, titulo, descripcion, categoria);
+                
+                if (result.success) {
+                    msgDiv.innerHTML = '<div class="alert alert-success">✅ Laboratorio subido con éxito</div>';
+                    form.reset();
+                    setTimeout(() => {
+                        window.location.hash = 'laboratorios';
+                    }, 1500);
+                } else {
+                    msgDiv.innerHTML = `<div class="alert alert-error">❌ ${result.error}</div>`;
+                    btn.textContent = originalText;
+                    btn.disabled = false;
+                }
+            });
         }
     }
+}
+
+function escapeHtml(text) {
+    if (!text) return '';
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
 }
 
 // Actualizar UI según autenticación
@@ -214,11 +282,10 @@ function actualizarUI() {
 async function initApp() {
     console.log('🚀 Iniciando AXON-LAB...');
     
-    // Inicializar autenticación
     await initAuth();
     actualizarUI();
     
-    // Configurar navegación
+    // Configurar navegación por hash
     window.addEventListener('hashchange', () => {
         const page = window.location.hash.slice(1) || 'inicio';
         loadPage(page);
@@ -238,11 +305,9 @@ async function initApp() {
     if (logoutLink) {
         logoutLink.addEventListener('click', async (e) => {
             e.preventDefault();
-            const { cerrarSesion } = await import('./auth.js');
             await cerrarSesion();
             actualizarUI();
             window.location.hash = 'inicio';
-            loadPage('inicio');
         });
     }
     
