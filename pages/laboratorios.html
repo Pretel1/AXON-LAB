@@ -1,62 +1,155 @@
 <div class="container">
     <h2>📚 Laboratorios Disponibles</h2>
-    <div class="search-bar">
-        <input type="text" id="searchInput" placeholder="Buscar por nombre..." oninput="filtrar()">
-        <select id="categoriaFilter" onchange="filtrar()">
+    
+    <div class="search-bar" style="display: flex; gap: 1rem; margin-bottom: 2rem; flex-wrap: wrap;">
+        <input type="text" id="searchInput" class="form-input" placeholder="Buscar por nombre..." style="flex: 1;">
+        <select id="categoriaFilter" class="form-select">
             <option value="">Todas las categorías</option>
-            <option>Programación</option><option>Redes</option><option>Bases de Datos</option>
-            <option>Inteligencia Artificial</option><option>Seguridad</option><option>Otros</option>
+            <option value="seguridad_web">Seguridad Web</option>
+            <option value="cryptografia">Criptografía</option>
+            <option value="redes">Redes</option>
+            <option value="malware">Análisis de Malware</option>
+            <option value="forensica">Forensica Digital</option>
+            <option value="programacion">Programación</option>
+            <option value="ia">Inteligencia Artificial</option>
         </select>
+        <button id="btnFiltrar" class="btn btn-primary">🔍 Filtrar</button>
     </div>
-    <div id="listaLaboratorios" class="grid"></div>
+    
+    <div id="listaLaboratorios" class="labs-grid">
+        <div class="loader"><div class="loader-spinner"></div></div>
+    </div>
 </div>
-<script>
-    let laboratorios = [];
 
-    function cargarLabs() {
-        laboratorios = window.obtenerLaboratorios();
-        filtrar();
+<script type="module">
+    import { listLabs, getDownloadUrl, incrementDownloads, deleteLab } from '../js/labs.js';
+    import { obtenerUsuarioActual, haySesionActiva } from '../js/auth.js';
+    
+    let laboratoriosData = [];
+    
+    async function cargarLaboratorios() {
+        const container = document.getElementById('listaLaboratorios');
+        container.innerHTML = '<div class="loader"><div class="loader-spinner"></div></div>';
+        
+        const categoria = document.getElementById('categoriaFilter').value;
+        const result = await listLabs(categoria === '' ? null : categoria);
+        
+        if (result.success) {
+            laboratoriosData = result.labs;
+            filtrar();
+        } else {
+            container.innerHTML = `<div class="alert alert-error">Error al cargar: ${result.error}</div>`;
+        }
     }
-
+    
     function filtrar() {
-        const term = document.getElementById('searchInput').value.toLowerCase();
-        const cat = document.getElementById('categoriaFilter').value;
-        const currentUser = window.obtenerUsuarioActual();
-        const filtrados = laboratorios.filter(lab =>
-            lab.nombre.toLowerCase().includes(term) &&
-            (cat === '' || lab.categoria === cat)
-        );
-        const contenedor = document.getElementById('listaLaboratorios');
+        const searchTerm = document.getElementById('searchInput').value.toLowerCase();
+        const currentUser = obtenerUsuarioActual();
+        
+        let filtrados = laboratoriosData;
+        
+        // Filtrar por búsqueda
+        if (searchTerm) {
+            filtrados = filtrados.filter(lab => 
+                lab.title?.toLowerCase().includes(searchTerm) ||
+                lab.description?.toLowerCase().includes(searchTerm)
+            );
+        }
+        
+        const container = document.getElementById('listaLaboratorios');
+        
         if (!filtrados.length) {
-            contenedor.innerHTML = '<p>No hay laboratorios.</p>';
+            container.innerHTML = '<p style="text-align: center;">No hay laboratorios que coincidan con tu búsqueda.</p>';
             return;
         }
-        contenedor.innerHTML = filtrados.map(lab => `
-            <div class="card">
-                <img src="${lab.imagenUrl}" alt="Portada" style="width:100%; height:160px; object-fit:cover; border-radius:12px; margin-bottom:10px;">
-                <h3>${lab.nombre}</h3>
-                <p><strong>Autor:</strong> ${lab.autor}</p>
-                <p><strong>Categoría:</strong> ${lab.categoria}</p>
-                <p><strong>Subido por:</strong> ${lab.ownerNombre || 'Anónimo'}</p>
-                <div class="btn-group">
-                    <button class="btn" onclick="window.visualizarArchivo('${lab.archivoUrl}')">📥 Ver/Descargar</button>
-                    ${currentUser && lab.ownerId === currentUser.id ? `<button class="btn btn-outline" onclick="eliminarLab(${lab.id})">🗑️ Eliminar</button>` : ''}
+        
+        container.innerHTML = filtrados.map(lab => `
+            <div class="lab-card" data-id="${lab.$id}">
+                <div class="lab-card-content">
+                    <span class="lab-card-category">📁 ${lab.category || 'Sin categoría'}</span>
+                    <h3 class="lab-card-title">${escapeHtml(lab.title)}</h3>
+                    <p class="lab-card-author">👤 ${escapeHtml(lab.userName || lab.userEmail)}</p>
+                    <p class="lab-card-description">${escapeHtml(lab.description?.substring(0, 120) || 'Sin descripción')}...</p>
+                    <div class="lab-card-stats">
+                        <span>📅 ${new Date(lab.createdAt).toLocaleDateString()}</span>
+                        <span>⬇️ ${lab.downloads || 0} descargas</span>
+                        <span>📄 ${lab.fileName || 'Archivo'}</span>
+                    </div>
+                    <div class="btn-group" style="display: flex; gap: 0.5rem; margin-top: 1rem;">
+                        <button class="btn btn-sm btn-primary descargar-btn" 
+                                data-fileid="${lab.fileId}" 
+                                data-docid="${lab.$id}" 
+                                data-downloads="${lab.downloads || 0}">
+                            📥 Descargar
+                        </button>
+                        ${currentUser && (currentUser.id === lab.userId || currentUser.email === lab.userEmail) ? `
+                            <button class="btn btn-sm btn-error eliminar-btn" 
+                                    data-docid="${lab.$id}" 
+                                    data-fileid="${lab.fileId}"
+                                    data-userid="${lab.userId}">
+                                🗑️ Eliminar
+                            </button>
+                        ` : ''}
+                    </div>
                 </div>
             </div>
         `).join('');
+        
+        // Eventos de descarga
+        document.querySelectorAll('.descargar-btn').forEach(btn => {
+            btn.addEventListener('click', async () => {
+                const fileId = btn.dataset.fileid;
+                const docId = btn.dataset.docid;
+                const downloads = parseInt(btn.dataset.downloads);
+                
+                const url = await getDownloadUrl(fileId);
+                if (url) {
+                    window.open(url, '_blank');
+                    await incrementDownloads(docId, downloads);
+                    cargarLaboratorios(); // Recargar para actualizar contador
+                } else {
+                    alert('Error al obtener el archivo');
+                }
+            });
+        });
+        
+        // Eventos de eliminación
+        document.querySelectorAll('.eliminar-btn').forEach(btn => {
+            btn.addEventListener('click', async () => {
+                const confirmar = confirm('¿Estás seguro de que quieres eliminar este laboratorio? Esta acción no se puede deshacer.');
+                if (confirmar) {
+                    const docId = btn.dataset.docid;
+                    const fileId = btn.dataset.fileid;
+                    const userId = btn.dataset.userid;
+                    
+                    const result = await deleteLab(docId, fileId, userId);
+                    if (result.success) {
+                        alert('✅ Laboratorio eliminado correctamente');
+                        cargarLaboratorios();
+                    } else {
+                        alert(`❌ Error: ${result.error}`);
+                    }
+                }
+            });
+        });
     }
-
-    async function eliminarLab(id) {
-        if (confirm('¿Eliminar este laboratorio?')) {
-            const result = window.eliminarLaboratorio(id);
-            window.mostrarNotificacion(result.message, result.success ? 'success' : 'error');
-            if (result.success) cargarLabs();
-        }
+    
+    function escapeHtml(text) {
+        if (!text) return '';
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
     }
-
-    window.filtrar = filtrar;
-    cargarLabs();
-    document.addEventListener('pageLoaded', (e) => {
-        if (e.detail.page === 'laboratorios') cargarLabs();
+    
+    // Configurar eventos
+    document.getElementById('btnFiltrar').addEventListener('click', () => {
+        filtrar();
     });
+    
+    document.getElementById('searchInput').addEventListener('keyup', (e) => {
+        if (e.key === 'Enter') filtrar();
+    });
+    
+    // Cargar laboratorios al iniciar
+    cargarLaboratorios();
 </script>
