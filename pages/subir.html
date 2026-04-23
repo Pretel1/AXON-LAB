@@ -1,52 +1,126 @@
 <div class="form-card">
     <h2>📤 Subir nuevo laboratorio</h2>
-    <p>Ingresa los datos. La <strong>imagen de portada</strong> debe ser una URL pública (ej. de Imgur, Pinterest, etc.)</p>
+    <p>Comparte tu laboratorio con la comunidad. Los archivos se guardan de forma segura en la nube.</p>
+    
     <form id="formSubir">
-        <div class="form-group"><label>Nombre del laboratorio *</label><input type="text" id="labNombre" required></div>
-        <div class="form-group"><label>Autor(es) *</label><input type="text" id="labAutor" required></div>
-        <div class="form-group"><label>Categoría *</label>
-            <select id="labCategoria" required>
-                <option value="">Seleccionar</option>
-                <option>Programación</option><option>Redes</option><option>Bases de Datos</option>
-                <option>Inteligencia Artificial</option><option>Seguridad</option><option>Otros</option>
+        <div class="form-group">
+            <label class="form-label required">Título del laboratorio</label>
+            <input type="text" id="labNombre" class="form-input" placeholder="Ej: Introducción a la Ciberseguridad" required>
+        </div>
+        
+        <div class="form-group">
+            <label class="form-label required">Descripción</label>
+            <textarea id="labDescripcion" class="form-textarea" rows="4" placeholder="Describe el contenido de tu laboratorio..." required></textarea>
+        </div>
+        
+        <div class="form-group">
+            <label class="form-label required">Categoría</label>
+            <select id="labCategoria" class="form-select" required>
+                <option value="">Seleccionar categoría</option>
+                <option value="seguridad_web">🔒 Seguridad Web</option>
+                <option value="cryptografia">🔐 Criptografía</option>
+                <option value="redes">🌐 Redes</option>
+                <option value="malware">🐛 Análisis de Malware</option>
+                <option value="forensica">🔍 Forensica Digital</option>
+                <option value="programacion">💻 Programación</option>
+                <option value="ia">🧠 Inteligencia Artificial</option>
             </select>
         </div>
-        <div class="form-group"><label>URL de la imagen de portada</label>
-            <input type="url" id="labImagen" placeholder="https://ejemplo.com/imagen.jpg">
-            <small>Deja vacío para usar imagen por defecto</small>
+        
+        <div class="form-group">
+            <label class="form-label required">Archivo (PDF, ZIP, DOC, DOCX)</label>
+            <input type="file" id="labArchivo" class="form-input" accept=".pdf,.zip,.doc,.docx" required>
+            <small class="form-help">Máximo 10MB. Formatos permitidos: PDF, ZIP, DOC, DOCX</small>
         </div>
-        <div class="form-group"><label>Enlace de OneDrive (archivo) *</label>
-            <input type="url" id="labArchivo" placeholder="https://onedrive.live.com/..." required>
-        </div>
-        <button type="submit" class="btn">Subir laboratorio</button>
+        
+        <button type="submit" class="btn btn-primary">🚀 Subir laboratorio</button>
         <div id="msgSubir"></div>
     </form>
 </div>
-<script>
-    document.getElementById('formSubir').addEventListener('submit', (e) => {
-        e.preventDefault();
-        const nombre = document.getElementById('labNombre').value.trim();
-        const autor = document.getElementById('labAutor').value.trim();
-        const categoria = document.getElementById('labCategoria').value;
-        let imagenUrl = document.getElementById('labImagen').value.trim();
-        const archivoUrl = document.getElementById('labArchivo').value.trim();
 
-        if (!nombre || !autor || !categoria || !archivoUrl) {
-            window.mostrarNotificacion('Completa todos los campos obligatorios', 'error');
+<script type="module">
+    import { uploadLab } from '../js/labs.js';
+    import { obtenerUsuarioActual, haySesionActiva } from '../js/auth.js';
+    
+    const form = document.getElementById('formSubir');
+    const msgDiv = document.getElementById('msgSubir');
+    
+    // Verificar sesión
+    const user = obtenerUsuarioActual();
+    if (!haySesionActiva() || !user) {
+        msgDiv.innerHTML = '<div class="alert alert-error">⚠️ Debes iniciar sesión para subir laboratorios</div>';
+        form.style.display = 'none';
+        setTimeout(() => {
+            window.location.hash = 'login';
+        }, 2000);
+    } else {
+        console.log('✅ Usuario autenticado:', user.email);
+    }
+    
+    form.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        
+        const nombre = document.getElementById('labNombre').value.trim();
+        const descripcion = document.getElementById('labDescripcion').value.trim();
+        const categoria = document.getElementById('labCategoria').value;
+        const archivo = document.getElementById('labArchivo').files[0];
+        
+        // Validaciones
+        if (!nombre) {
+            msgDiv.innerHTML = '<div class="alert alert-error">⚠️ Ingresa el título del laboratorio</div>';
             return;
         }
-        if (!archivoUrl.startsWith('http')) {
-            window.mostrarNotificacion('El enlace debe comenzar con http:// o https://', 'error');
+        
+        if (!descripcion) {
+            msgDiv.innerHTML = '<div class="alert alert-error">⚠️ Ingresa una descripción</div>';
             return;
         }
-        const result = window.agregarLaboratorio(nombre, autor, categoria, imagenUrl, archivoUrl);
-        const msgDiv = document.getElementById('msgSubir');
+        
+        if (!categoria) {
+            msgDiv.innerHTML = '<div class="alert alert-error">⚠️ Selecciona una categoría</div>';
+            return;
+        }
+        
+        if (!archivo) {
+            msgDiv.innerHTML = '<div class="alert alert-error">⚠️ Selecciona un archivo para subir</div>';
+            return;
+        }
+        
+        // Validar tamaño (10MB = 10 * 1024 * 1024 bytes)
+        if (archivo.size > 10 * 1024 * 1024) {
+            msgDiv.innerHTML = '<div class="alert alert-error">⚠️ El archivo no debe superar los 10MB</div>';
+            return;
+        }
+        
+        // Validar tipo de archivo
+        const allowedTypes = ['application/pdf', 'application/zip', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'];
+        if (!allowedTypes.includes(archivo.type) && !archivo.name.match(/\.(pdf|zip|doc|docx)$/i)) {
+            msgDiv.innerHTML = '<div class="alert alert-error">⚠️ Formato no permitido. Usa PDF, ZIP, DOC o DOCX</div>';
+            return;
+        }
+        
+        // Subir
+        const btn = form.querySelector('button');
+        const originalText = btn.textContent;
+        btn.textContent = '⏳ Subiendo archivo...';
+        btn.disabled = true;
+        msgDiv.innerHTML = '<div class="alert alert-info">📤 Subiendo laboratorio, por favor espera...</div>';
+        
+        const result = await uploadLab(archivo, nombre, descripcion, categoria);
+        
         if (result.success) {
-            msgDiv.innerHTML = `<div class="alert alert-success">${result.message}</div>`;
-            document.getElementById('formSubir').reset();
-            setTimeout(() => window.cambiarPagina('laboratorios'), 1500);
+            msgDiv.innerHTML = '<div class="alert alert-success">✅ ¡Laboratorio subido con éxito!</div>';
+            form.reset();
+            setTimeout(() => {
+                window.location.hash = 'laboratorios';
+                if (typeof window.cargarLaboratorios === 'function') {
+                    window.cargarLaboratorios();
+                }
+            }, 2000);
         } else {
-            msgDiv.innerHTML = `<div class="alert alert-error">${result.message}</div>`;
+            msgDiv.innerHTML = `<div class="alert alert-error">❌ Error: ${result.error}</div>`;
+            btn.textContent = originalText;
+            btn.disabled = false;
         }
     });
 </script>
