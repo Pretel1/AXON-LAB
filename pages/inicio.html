@@ -1,22 +1,74 @@
 <div class="container">
     <h1>📚 Bienvenido a AXON</h1>
-    <p>Repositorio de laboratorios académicos. Comparte, descubre y aprende usando enlaces de OneDrive.</p>
+    <p>Repositorio de laboratorios académicos. Comparte, descubre y aprende.</p>
+    
     <div style="margin-top: 2rem;">
-        <button class="btn" onclick="window.cambiarPagina('laboratorios')">Ver laboratorios</button>
-        <button class="btn btn-outline" onclick="window.cambiarPagina('subir')">Subir laboratorio</button>
+        <button class="btn btn-primary" id="btnVerLaboratorios">Ver laboratorios</button>
+        <button class="btn btn-outline" id="btnSubirLaboratorio">Subir laboratorio</button>
     </div>
+    
     <div style="margin-top: 2rem;">
         <h3>📊 Estadísticas</h3>
         <p>Laboratorios disponibles: <strong id="totalLabs">0</strong></p>
+        <div id="labsPreview"></div>
     </div>
 </div>
-<script>
-    function actualizarEstadisticas() {
-        const labs = window.obtenerLaboratorios();
-        document.getElementById('totalLabs').textContent = labs.length;
+
+<script type="module">
+    import { listLabs } from '../js/labs.js';
+    import { haySesionActiva } from '../js/auth.js';
+    
+    // Cargar estadísticas
+    async function cargarEstadisticas() {
+        const totalSpan = document.getElementById('totalLabs');
+        const previewDiv = document.getElementById('labsPreview');
+        
+        if (totalSpan) {
+            const result = await listLabs();
+            if (result.success) {
+                const total = result.labs.length;
+                totalSpan.textContent = total;
+                
+                // Mostrar últimos 3 laboratorios
+                if (result.labs.length > 0) {
+                    const ultimos = result.labs.slice(0, 3);
+                    previewDiv.innerHTML = `
+                        <h4>📌 Últimos laboratorios:</h4>
+                        <ul style="list-style: none; padding: 0;">
+                            ${ultimos.map(lab => `
+                                <li style="padding: 8px 0; border-bottom: 1px solid var(--border-color);">
+                                    <strong>${lab.title}</strong> - ${lab.category}
+                                </li>
+                            `).join('')}
+                        </ul>
+                    `;
+                } else {
+                    previewDiv.innerHTML = '<p>No hay laboratorios aún. ¡Sé el primero en subir uno!</p>';
+                }
+            }
+        }
     }
-    actualizarEstadisticas();
-    document.addEventListener('pageLoaded', (e) => {
-        if (e.detail.page === 'inicio') actualizarEstadisticas();
-    });
+    
+    // Configurar botones
+    const btnVer = document.getElementById('btnVerLaboratorios');
+    if (btnVer) {
+        btnVer.addEventListener('click', () => {
+            window.location.hash = 'laboratorios';
+        });
+    }
+    
+    const btnSubir = document.getElementById('btnSubirLaboratorio');
+    if (btnSubir) {
+        btnSubir.addEventListener('click', () => {
+            if (haySesionActiva()) {
+                window.location.hash = 'subir';
+            } else {
+                alert('Debes iniciar sesión para subir laboratorios');
+                window.location.hash = 'login';
+            }
+        });
+    }
+    
+    // Cargar estadísticas
+    cargarEstadisticas();
 </script>
