@@ -1,9 +1,9 @@
-// js/appwrite-config.js
+// js/appwrite-config.js - CORREGIDO para región NYC
 import { Client, Account, Databases, Storage, ID } from 'https://cdn.jsdelivr.net/npm/appwrite@14.0.0/+esm';
 
-// Usar endpoint global (sin región específica)
+// Usar endpoint REGIONAL (NYC - Norteamérica)
 const client = new Client()
-    .setEndpoint('https://cloud.appwrite.io/v1')  // ← Cambiado de nyc a cloud
+    .setEndpoint('https://nyc.cloud.appwrite.io/v1')  // ← Cambiado a nyc específico
     .setProject('69e8df29003c99e7a35e');
 
 export const account = new Account(client);
