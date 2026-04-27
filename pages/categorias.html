@@ -1,20 +1,247 @@
-<div class="container">
-    <h2>🏷️ Explorar por categorías</h2>
-    <div id="listaCategorias" class="grid"></div>
+<!-- pages/categorias.html - Vista de categorías mejorada -->
+<div class="container fade-in">
+    <div class="page-header" style="text-align: center; margin-bottom: 2rem;">
+        <h2>🏷️ Explorar por categorías</h2>
+        <p style="color: var(--text-muted);">Descubre laboratorios organizados por tema</p>
+    </div>
+    
+    <div id="listaCategorias" class="categories-grid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 1.5rem;">
+        <div class="loader"><div class="loader-spinner"></div><p>Cargando categorías...</p></div>
+    </div>
 </div>
-<script>
-    const labs = window.obtenerLaboratorios();
-    const categorias = [...new Set(labs.map(l => l.categoria))];
-    const container = document.getElementById('listaCategorias');
-    if (categorias.length) {
-        container.innerHTML = categorias.map(cat => `
-            <div class="card">
-                <h3>${cat}</h3>
-                <p>${labs.filter(l => l.categoria === cat).length} laboratorios</p>
-                <button class="btn" onclick="window.cambiarPagina('laboratorios'); setTimeout(() => document.getElementById('categoriaFilter').value='${cat}', 100);">Ver</button>
-            </div>
-        `).join('');
-    } else {
-        container.innerHTML = '<p>No hay categorías.</p>';
+
+<style>
+    .category-card {
+        background: var(--bg-card, white);
+        border: 1px solid var(--border-color, #e5e7eb);
+        border-radius: 16px;
+        padding: 1.5rem;
+        text-align: center;
+        cursor: pointer;
+        transition: all 0.3s ease;
     }
+    
+    .category-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 10px 25px -5px rgba(0,0,0,0.1);
+        border-color: var(--color-primary, #007bff);
+    }
+    
+    .category-icon {
+        font-size: 3rem;
+        margin-bottom: 1rem;
+    }
+    
+    .category-name {
+        font-size: 1.25rem;
+        font-weight: 600;
+        margin-bottom: 0.5rem;
+        color: var(--text-primary, #1f2937);
+    }
+    
+    .category-count {
+        font-size: 0.875rem;
+        color: var(--text-muted, #6c757d);
+        margin-bottom: 1rem;
+    }
+    
+    .category-btn {
+        background: var(--color-primary, #007bff);
+        color: white;
+        border: none;
+        padding: 0.5rem 1rem;
+        border-radius: 8px;
+        cursor: pointer;
+        transition: background 0.2s;
+    }
+    
+    .category-btn:hover {
+        background: var(--color-primary-dark, #0056b3);
+    }
+    
+    .loader-spinner {
+        width: 40px;
+        height: 40px;
+        border: 3px solid var(--border-color, #e5e7eb);
+        border-top-color: var(--color-primary, #007bff);
+        border-radius: 50%;
+        animation: spin 0.8s linear infinite;
+        margin: 0 auto 1rem;
+    }
+    
+    @keyframes spin {
+        to { transform: rotate(360deg); }
+    }
+    
+    .empty-state {
+        grid-column: 1/-1;
+        text-align: center;
+        padding: 3rem;
+        background: var(--bg-secondary, #f8f9fa);
+        border-radius: 12px;
+    }
+</style>
+
+<script type="module">
+    import { listLabs, getUniqueCategories } from '../js/labs.js';
+    import { haySesionActiva } from '../js/auth.js';
+    
+    // ============================================
+    // OBTENER ICONO POR CATEGORÍA
+    // ============================================
+    function getIconForCategory(category) {
+        const icons = {
+            'Programación': '💻',
+            'Matemáticas': '📐',
+            'Física': '⚡',
+            'Química': '🧪',
+            'Biología': '🧬',
+            'Idiomas': '🌐',
+            'Seguridad': '🔒',
+            'Inteligencia Artificial': '🧠',
+            'Redes': '🌐',
+            'Base de Datos': '🗄️',
+            'Diseño': '🎨',
+            'Otros': '📚'
+        };
+        return icons[category] || '📁';
+    }
+    
+    // ============================================
+    // ESCAPE HTML
+    // ============================================
+    function escapeHtml(text) {
+        if (!text) return '';
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
+    }
+    
+    // ============================================
+    // CARGAR CATEGORÍAS
+    // ============================================
+    async function cargarCategorias() {
+        const container = document.getElementById('listaCategorias');
+        if (!container) return;
+        
+        container.innerHTML = '<div class="loader"><div class="loader-spinner"></div><p>Cargando categorías...</p></div>';
+        
+        try {
+            // Obtener todos los laboratorios
+            const result = await listLabs();
+            
+            if (!result.success) {
+                container.innerHTML = `
+                    <div class="empty-state">
+                        <div style="font-size: 3rem;">⚠️</div>
+                        <h3>Error al cargar</h3>
+                        <p>${result.error}</p>
+                        <button onclick="location.reload()" class="category-btn">Reintentar</button>
+                    </div>
+                `;
+                return;
+            }
+            
+            const labs = result.labs;
+            
+            if (labs.length === 0) {
+                container.innerHTML = `
+                    <div class="empty-state">
+                        <div style="font-size: 3rem;">📭</div>
+                        <h3>No hay laboratorios disponibles</h3>
+                        <p>Sé el primero en compartir un laboratorio.</p>
+                        ${haySesionActiva() ? 
+                            `<button onclick="window.location.hash='subir'" class="category-btn" style="margin-top: 1rem;">📤 Subir laboratorio</button>` : 
+                            `<button onclick="window.location.hash='registro'" class="category-btn" style="margin-top: 1rem;">📝 Registrarse</button>`
+                        }
+                    </div>
+                `;
+                return;
+            }
+            
+            // Calcular categorías y conteos
+            const categoriasMap = new Map();
+            
+            labs.forEach(lab => {
+                const cat = lab.category || 'Sin categoría';
+                if (categoriasMap.has(cat)) {
+                    categoriasMap.set(cat, categoriasMap.get(cat) + 1);
+                } else {
+                    categoriasMap.set(cat, 1);
+                }
+            });
+            
+            // Ordenar por nombre
+            const categoriasOrdenadas = Array.from(categoriasMap.keys()).sort();
+            
+            if (categoriasOrdenadas.length === 0) {
+                container.innerHTML = '<div class="empty-state"><p>No hay categorías disponibles.</p></div>';
+                return;
+            }
+            
+            // Renderizar tarjetas
+            container.innerHTML = categoriasOrdenadas.map(cat => {
+                const count = categoriasMap.get(cat);
+                const icon = getIconForCategory(cat);
+                
+                return `
+                    <div class="category-card" data-category="${escapeHtml(cat)}">
+                        <div class="category-icon">${icon}</div>
+                        <div class="category-name">${escapeHtml(cat)}</div>
+                        <div class="category-count">📚 ${count} laboratorio${count !== 1 ? 's' : ''}</div>
+                        <button class="category-btn ver-categoria-btn">Ver laboratorios →</button>
+                    </div>
+                `;
+            }).join('');
+            
+            // Configurar eventos de clic
+            document.querySelectorAll('.category-card').forEach(card => {
+                const btn = card.querySelector('.ver-categoria-btn');
+                if (btn) {
+                    btn.addEventListener('click', (e) => {
+                        e.stopPropagation();
+                        const category = card.dataset.category;
+                        irACategoria(category);
+                    });
+                }
+                
+                // También clic en toda la tarjeta
+                card.addEventListener('click', () => {
+                    const category = card.dataset.category;
+                    irACategoria(category);
+                });
+            });
+            
+        } catch (error) {
+            console.error('Error cargando categorías:', error);
+            container.innerHTML = `
+                <div class="empty-state">
+                    <div style="font-size: 3rem;">❌</div>
+                    <h3>Error al cargar</h3>
+                    <p>${error.message}</p>
+                    <button onclick="location.reload()" class="category-btn">Reintentar</button>
+                </div>
+            `;
+        }
+    }
+    
+    // ============================================
+    // IR A CATEGORÍA SELECCIONADA
+    // ============================================
+    function irACategoria(category) {
+        // Guardar categoría seleccionada en sessionStorage
+        sessionStorage.setItem('selectedCategory', category);
+        
+        // Navegar a laboratorios
+        if (typeof window.navigateTo === 'function') {
+            window.navigateTo('laboratorios');
+        } else {
+            window.location.hash = 'laboratorios';
+        }
+    }
+    
+    // ============================================
+    // INICIALIZAR
+    // ============================================
+    cargarCategorias();
 </script>
