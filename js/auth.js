@@ -407,6 +407,9 @@ window.recuperarPassword = recuperarPassword;
 window.restablecerPassword = restablecerPassword;
 window.emailEstaVerificado = emailEstaVerificado;
 
+// 🔥 EXPORTACIÓN DE 'account' PARA PRUEBAS EN CONSOLA
+export { account };
+
 // ============================================
 // INICIALIZAR AL CARGAR
 // ============================================
