@@ -1,93 +1,300 @@
-<div class="container">
-    <h2>📚 Laboratorios Disponibles</h2>
+<!-- pages/laboratorios.html - Listado de laboratorios mejorado -->
+<div class="container fade-in">
+    <div class="page-header" style="margin-bottom: 1.5rem;">
+        <h2>📚 Laboratorios Disponibles</h2>
+        <p>Explora y descarga materiales académicos compartidos por la comunidad</p>
+    </div>
     
-    <div class="search-bar" style="display: flex; gap: 1rem; margin-bottom: 2rem; flex-wrap: wrap;">
-        <input type="text" id="searchInput" class="form-input" placeholder="Buscar por nombre..." style="flex: 1;">
-        <select id="categoriaFilter" class="form-select">
-            <option value="">Todas las categorías</option>
-            <option value="seguridad_web">Seguridad Web</option>
-            <option value="cryptografia">Criptografía</option>
-            <option value="redes">Redes</option>
-            <option value="malware">Análisis de Malware</option>
-            <option value="forensica">Forensica Digital</option>
-            <option value="programacion">Programación</option>
-            <option value="ia">Inteligencia Artificial</option>
-        </select>
-        <button id="btnFiltrar" class="btn btn-primary">🔍 Filtrar</button>
+    <!-- Barra de búsqueda y filtros -->
+    <div class="search-section" style="margin-bottom: 2rem;">
+        <div style="display: flex; gap: 1rem; flex-wrap: wrap;">
+            <input type="text" id="searchInput" class="form-input" 
+                   placeholder="🔍 Buscar por nombre o descripción..." 
+                   style="flex: 1; min-width: 200px;">
+            <select id="categoriaFilter" class="form-select" style="min-width: 180px;">
+                <option value="">📋 Todas las categorías</option>
+            </select>
+            <button id="btnFiltrar" class="btn btn-primary">🔍 Filtrar</button>
+            <button id="btnLimpiar" class="btn btn-outline">🗑️ Limpiar filtros</button>
+        </div>
+    </div>
+    
+    <!-- Resultados -->
+    <div id="resultadosInfo" style="margin-bottom: 1rem; font-size: 0.875rem; color: var(--text-muted); display: none;">
+        <span id="resultadosCount"></span>
     </div>
     
     <div id="listaLaboratorios" class="labs-grid">
-        <div class="loader"><div class="loader-spinner"></div></div>
+        <div class="loader"><div class="loader-spinner"></div><p>Cargando laboratorios...</p></div>
     </div>
 </div>
+
+<style>
+    .labs-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+        gap: 1.5rem;
+    }
+    
+    .lab-card {
+        background: var(--bg-card, white);
+        border: 1px solid var(--border-color, #e5e7eb);
+        border-radius: 12px;
+        transition: all 0.3s ease;
+        overflow: hidden;
+    }
+    
+    .lab-card:hover {
+        transform: translateY(-4px);
+        box-shadow: 0 10px 25px -5px rgba(0,0,0,0.1);
+        border-color: var(--color-primary, #007bff);
+    }
+    
+    .lab-card-content {
+        padding: 1.25rem;
+    }
+    
+    .lab-card-category {
+        display: inline-block;
+        font-size: 0.7rem;
+        background: var(--color-primary-light, #e3f2fd);
+        color: var(--color-primary, #007bff);
+        padding: 0.25rem 0.5rem;
+        border-radius: 4px;
+        margin-bottom: 0.75rem;
+    }
+    
+    .lab-card-title {
+        font-size: 1.125rem;
+        font-weight: 600;
+        margin: 0 0 0.5rem 0;
+        color: var(--text-primary, #1f2937);
+    }
+    
+    .lab-card-author {
+        font-size: 0.75rem;
+        color: var(--text-muted, #6c757d);
+        margin-bottom: 0.75rem;
+    }
+    
+    .lab-card-description {
+        font-size: 0.875rem;
+        color: var(--text-secondary, #4b5563);
+        line-height: 1.4;
+        margin-bottom: 1rem;
+    }
+    
+    .lab-card-stats {
+        display: flex;
+        gap: 1rem;
+        font-size: 0.7rem;
+        color: var(--text-muted, #6c757d);
+        margin-bottom: 1rem;
+        flex-wrap: wrap;
+    }
+    
+    .btn-group {
+        display: flex;
+        gap: 0.5rem;
+    }
+    
+    .btn-sm {
+        padding: 0.375rem 0.75rem;
+        font-size: 0.75rem;
+        border-radius: 6px;
+        cursor: pointer;
+        transition: all 0.2s;
+    }
+    
+    .btn-primary {
+        background: var(--color-primary, #007bff);
+        color: white;
+        border: none;
+    }
+    
+    .btn-primary:hover {
+        background: var(--color-primary-dark, #0056b3);
+    }
+    
+    .btn-error {
+        background: #dc3545;
+        color: white;
+        border: none;
+    }
+    
+    .btn-error:hover {
+        background: #c82333;
+    }
+    
+    .btn-outline {
+        background: transparent;
+        border: 1px solid var(--border-color, #e5e7eb);
+        color: var(--text-primary, #1f2937);
+    }
+    
+    .btn-outline:hover {
+        background: var(--bg-hover, #f8f9fa);
+    }
+    
+    .empty-state {
+        grid-column: 1/-1;
+        text-align: center;
+        padding: 3rem;
+        background: var(--bg-secondary, #f8f9fa);
+        border-radius: 12px;
+    }
+    
+    .form-input, .form-select {
+        padding: 0.5rem 0.75rem;
+        border: 1px solid var(--border-color, #e5e7eb);
+        border-radius: 8px;
+        font-size: 0.875rem;
+    }
+    
+    .form-input:focus, .form-select:focus {
+        outline: none;
+        border-color: var(--color-primary, #007bff);
+        box-shadow: 0 0 0 2px rgba(0,123,255,0.1);
+    }
+</style>
 
 <script type="module">
     import { listLabs, getDownloadUrl, incrementDownloads, deleteLab } from '../js/labs.js';
     import { obtenerUsuarioActual, haySesionActiva } from '../js/auth.js';
     
     let laboratoriosData = [];
+    let categoriasUnicas = [];
     
+    // ============================================
+    // CARGAR CATEGORÍAS DINÁMICAS
+    // ============================================
+    async function cargarCategorias() {
+        try {
+            // Obtener todas las categorías de los laboratorios
+            const result = await listLabs();
+            if (result.success && result.labs.length > 0) {
+                const categoriasSet = new Set();
+                result.labs.forEach(lab => {
+                    if (lab.category && lab.category.trim()) {
+                        categoriasSet.add(lab.category);
+                    }
+                });
+                categoriasUnicas = Array.from(categoriasSet).sort();
+            } else {
+                // Categorías por defecto si no hay laboratorios
+                categoriasUnicas = [
+                    'Programación', 'Matemáticas', 'Física', 'Química', 
+                    'Biología', 'Idiomas', 'Seguridad', 'Inteligencia Artificial'
+                ];
+            }
+            
+            // Llenar select de categorías
+            const select = document.getElementById('categoriaFilter');
+            if (select) {
+                // Mantener la opción "Todas"
+                select.innerHTML = '<option value="">📋 Todas las categorías</option>';
+                categoriasUnicas.forEach(cat => {
+                    select.innerHTML += `<option value="${escapeHtml(cat)}">📁 ${escapeHtml(cat)}</option>`;
+                });
+            }
+        } catch (error) {
+            console.error('Error cargando categorías:', error);
+        }
+    }
+    
+    // ============================================
+    // CARGAR LABORATORIOS
+    // ============================================
     async function cargarLaboratorios() {
         const container = document.getElementById('listaLaboratorios');
-        container.innerHTML = '<div class="loader"><div class="loader-spinner"></div></div>';
+        if (!container) return;
         
-        const categoria = document.getElementById('categoriaFilter').value;
+        container.innerHTML = '<div class="loader"><div class="loader-spinner"></div><p>Cargando laboratorios...</p></div>';
+        
+        const categoria = document.getElementById('categoriaFilter')?.value || '';
         const result = await listLabs(categoria === '' ? null : categoria);
         
         if (result.success) {
             laboratoriosData = result.labs;
             filtrar();
         } else {
-            container.innerHTML = `<div class="alert alert-error">Error al cargar: ${result.error}</div>`;
+            container.innerHTML = `<div class="alert alert-error">❌ Error al cargar: ${result.error}</div>`;
         }
     }
     
+    // ============================================
+    // FILTRAR LABORATORIOS
+    // ============================================
     function filtrar() {
-        const searchTerm = document.getElementById('searchInput').value.toLowerCase();
+        const searchTerm = document.getElementById('searchInput')?.value.toLowerCase() || '';
         const currentUser = obtenerUsuarioActual();
         
-        let filtrados = laboratoriosData;
+        let filtrados = [...laboratoriosData];
         
         // Filtrar por búsqueda
         if (searchTerm) {
             filtrados = filtrados.filter(lab => 
                 lab.title?.toLowerCase().includes(searchTerm) ||
-                lab.description?.toLowerCase().includes(searchTerm)
+                lab.description?.toLowerCase().includes(searchTerm) ||
+                lab.category?.toLowerCase().includes(searchTerm)
             );
         }
         
         const container = document.getElementById('listaLaboratorios');
+        const resultadosInfo = document.getElementById('resultadosInfo');
+        const resultadosCount = document.getElementById('resultadosCount');
         
         if (!filtrados.length) {
-            container.innerHTML = '<p style="text-align: center;">No hay laboratorios que coincidan con tu búsqueda.</p>';
+            container.innerHTML = `
+                <div class="empty-state">
+                    <div style="font-size: 3rem;">🔍</div>
+                    <h3>No hay resultados</h3>
+                    <p>No se encontraron laboratorios que coincidan con tu búsqueda.</p>
+                    <button class="btn btn-outline" id="btnLimpiarEmpty">Limpiar filtros</button>
+                </div>
+            `;
+            const btnLimpiarEmpty = document.getElementById('btnLimpiarEmpty');
+            if (btnLimpiarEmpty) {
+                btnLimpiarEmpty.addEventListener('click', limpiarFiltros);
+            }
+            if (resultadosInfo) resultadosInfo.style.display = 'none';
             return;
+        }
+        
+        // Mostrar resultados info
+        if (resultadosInfo) {
+            resultadosCount.textContent = `📊 Mostrando ${filtrados.length} de ${laboratoriosData.length} laboratorio${laboratoriosData.length !== 1 ? 's' : ''}`;
+            resultadosInfo.style.display = 'block';
         }
         
         container.innerHTML = filtrados.map(lab => `
             <div class="lab-card" data-id="${lab.$id}">
                 <div class="lab-card-content">
-                    <span class="lab-card-category">📁 ${lab.category || 'Sin categoría'}</span>
+                    <span class="lab-card-category">📁 ${escapeHtml(lab.category || 'Sin categoría')}</span>
                     <h3 class="lab-card-title">${escapeHtml(lab.title)}</h3>
                     <p class="lab-card-author">👤 ${escapeHtml(lab.userName || lab.userEmail)}</p>
-                    <p class="lab-card-description">${escapeHtml(lab.description?.substring(0, 120) || 'Sin descripción')}...</p>
+                    <p class="lab-card-description">${escapeHtml(lab.description?.substring(0, 120) || 'Sin descripción')}${lab.description?.length > 120 ? '...' : ''}</p>
                     <div class="lab-card-stats">
                         <span>📅 ${new Date(lab.createdAt).toLocaleDateString()}</span>
                         <span>⬇️ ${lab.downloads || 0} descargas</span>
-                        <span>📄 ${lab.fileName || 'Archivo'}</span>
+                        <span>📄 ${lab.fileName?.split('.').pop() || 'Archivo'}</span>
                     </div>
-                    <div class="btn-group" style="display: flex; gap: 0.5rem; margin-top: 1rem;">
-                        <button class="btn btn-sm btn-primary descargar-btn" 
+                    <div class="btn-group">
+                        <button class="btn-sm btn-primary descargar-btn" 
                                 data-fileid="${lab.fileId}" 
                                 data-docid="${lab.$id}" 
                                 data-downloads="${lab.downloads || 0}">
                             📥 Descargar
                         </button>
+                        <button class="btn-sm btn-outline detalle-btn" data-id="${lab.$id}">
+                            👁️ Ver detalle
+                        </button>
                         ${currentUser && (currentUser.id === lab.userId || currentUser.email === lab.userEmail) ? `
-                            <button class="btn btn-sm btn-error eliminar-btn" 
+                            <button class="btn-sm btn-error eliminar-btn" 
                                     data-docid="${lab.$id}" 
                                     data-fileid="${lab.fileId}"
                                     data-userid="${lab.userId}">
-                                🗑️ Eliminar
+                                🗑️
                             </button>
                         ` : ''}
                     </div>
@@ -97,7 +304,8 @@
         
         // Eventos de descarga
         document.querySelectorAll('.descargar-btn').forEach(btn => {
-            btn.addEventListener('click', async () => {
+            btn.addEventListener('click', async (e) => {
+                e.stopPropagation();
                 const fileId = btn.dataset.fileid;
                 const docId = btn.dataset.docid;
                 const downloads = parseInt(btn.dataset.downloads);
@@ -106,17 +314,40 @@
                 if (url) {
                     window.open(url, '_blank');
                     await incrementDownloads(docId, downloads);
-                    cargarLaboratorios(); // Recargar para actualizar contador
+                    // Actualizar contador en el DOM sin recargar todo
+                    const downloadSpan = btn.closest('.lab-card')?.querySelector('.lab-card-stats span:nth-child(2)');
+                    if (downloadSpan) {
+                        const currentText = downloadSpan.textContent;
+                        const match = currentText.match(/⬇️ (\d+)/);
+                        if (match) {
+                            const newCount = parseInt(match[1]) + 1;
+                            downloadSpan.textContent = `⬇️ ${newCount} descargas`;
+                        }
+                    }
                 } else {
-                    alert('Error al obtener el archivo');
+                    alert('❌ Error al obtener el archivo');
+                }
+            });
+        });
+        
+        // Eventos de detalle
+        document.querySelectorAll('.detalle-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                const id = btn.dataset.id;
+                if (typeof window.navigateTo === 'function') {
+                    window.navigateTo('detalle', { id: id });
+                } else {
+                    window.location.hash = `detalle?id=${id}`;
                 }
             });
         });
         
         // Eventos de eliminación
         document.querySelectorAll('.eliminar-btn').forEach(btn => {
-            btn.addEventListener('click', async () => {
-                const confirmar = confirm('¿Estás seguro de que quieres eliminar este laboratorio? Esta acción no se puede deshacer.');
+            btn.addEventListener('click', async (e) => {
+                e.stopPropagation();
+                const confirmar = confirm('⚠️ ¿Estás seguro de que quieres eliminar este laboratorio? Esta acción no se puede deshacer.');
                 if (confirmar) {
                     const docId = btn.dataset.docid;
                     const fileId = btn.dataset.fileid;
@@ -132,8 +363,39 @@
                 }
             });
         });
+        
+        // Hacer clic en toda la tarjeta para ver detalle
+        document.querySelectorAll('.lab-card').forEach(card => {
+            card.addEventListener('click', (e) => {
+                // Si el clic no fue en un botón
+                if (!e.target.closest('.btn-group')) {
+                    const id = card.dataset.id;
+                    if (typeof window.navigateTo === 'function') {
+                        window.navigateTo('detalle', { id: id });
+                    } else {
+                        window.location.hash = `detalle?id=${id}`;
+                    }
+                }
+            });
+        });
     }
     
+    // ============================================
+    // LIMPIAR FILTROS
+    // ============================================
+    function limpiarFiltros() {
+        const searchInput = document.getElementById('searchInput');
+        const categoriaFilter = document.getElementById('categoriaFilter');
+        
+        if (searchInput) searchInput.value = '';
+        if (categoriaFilter) categoriaFilter.value = '';
+        
+        cargarLaboratorios();
+    }
+    
+    // ============================================
+    // ESCAPE HTML
+    // ============================================
     function escapeHtml(text) {
         if (!text) return '';
         const div = document.createElement('div');
@@ -141,15 +403,41 @@
         return div.innerHTML;
     }
     
-    // Configurar eventos
-    document.getElementById('btnFiltrar').addEventListener('click', () => {
-        filtrar();
-    });
+    // ============================================
+    // CONFIGURAR EVENTOS
+    // ============================================
+    function configurarEventos() {
+        const btnFiltrar = document.getElementById('btnFiltrar');
+        if (btnFiltrar) {
+            btnFiltrar.addEventListener('click', filtrar);
+        }
+        
+        const btnLimpiar = document.getElementById('btnLimpiar');
+        if (btnLimpiar) {
+            btnLimpiar.addEventListener('click', limpiarFiltros);
+        }
+        
+        const searchInput = document.getElementById('searchInput');
+        if (searchInput) {
+            searchInput.addEventListener('keyup', (e) => {
+                if (e.key === 'Enter') filtrar();
+            });
+        }
+        
+        const categoriaFilter = document.getElementById('categoriaFilter');
+        if (categoriaFilter) {
+            categoriaFilter.addEventListener('change', filtrar);
+        }
+    }
     
-    document.getElementById('searchInput').addEventListener('keyup', (e) => {
-        if (e.key === 'Enter') filtrar();
-    });
+    // ============================================
+    // INICIALIZAR
+    // ============================================
+    async function init() {
+        await cargarCategorias();
+        await cargarLaboratorios();
+        configurarEventos();
+    }
     
-    // Cargar laboratorios al iniciar
-    cargarLaboratorios();
+    init();
 </script>
