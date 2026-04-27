@@ -13,23 +13,55 @@
 </head>
 <body>
     <div class="app-container">
+        <!-- ============================================ -->
+        <!-- SIDEBAR / MENÚ LATERAL                        -->
+        <!-- ============================================ -->
         <aside class="sidebar" id="sidebar">
             <div class="sidebar__header">
                 <div class="sidebar__logo">AXON</div>
                 <div class="sidebar__subtitle">Laboratorios Académicos</div>
             </div>
             <nav class="sidebar__nav">
-                <a href="#inicio" class="nav-link active" data-page="inicio"><span class="icon">🏠</span><span>Inicio</span></a>
-                <a href="#laboratorios" class="nav-link" data-page="laboratorios"><span class="icon">📚</span><span>Laboratorios</span></a>
-                <a href="#categorias" class="nav-link" data-page="categorias"><span class="icon">🏷️</span><span>Categorías</span></a>
-                <a href="#subir" class="nav-link" data-page="subir" id="subirNavLink" style="display: none;"><span class="icon">📤</span><span>Subir Laboratorio</span></a>
+                <a href="#inicio" class="nav-link active" data-page="inicio">
+                    <span class="icon">🏠</span>
+                    <span>Inicio</span>
+                </a>
+                <a href="#laboratorios" class="nav-link" data-page="laboratorios">
+                    <span class="icon">📚</span>
+                    <span>Laboratorios</span>
+                </a>
+                <a href="#categorias" class="nav-link" data-page="categorias">
+                    <span class="icon">🏷️</span>
+                    <span>Categorías</span>
+                </a>
+                <a href="#subir" class="nav-link" data-page="subir" id="subirNavLink" style="display: none;">
+                    <span class="icon">📤</span>
+                    <span>Subir Laboratorio</span>
+                </a>
                 <div class="sidebar__divider"></div>
-                <a href="#registro" class="nav-link" data-page="registro" id="registroNavLink"><span class="icon">📝</span><span>Registrarse</span></a>
-                <a href="#login" class="nav-link" data-page="login" id="loginNavLink"><span class="icon">🔑</span><span>Iniciar Sesión</span></a>
-                <a href="#logout" class="nav-link" id="logoutNavLink" style="display: none;"><span class="icon">🚪</span><span>Cerrar Sesión</span></a>
+                <a href="#registro" class="nav-link" data-page="registro" id="registroNavLink">
+                    <span class="icon">📝</span>
+                    <span>Registrarse</span>
+                </a>
+                <a href="#login" class="nav-link" data-page="login" id="loginNavLink">
+                    <span class="icon">🔑</span>
+                    <span>Iniciar Sesión</span>
+                </a>
+                <a href="#" class="nav-link" id="logoutNavLink" style="display: none;">
+                    <span class="icon">🚪</span>
+                    <span>Cerrar Sesión</span>
+                </a>
             </nav>
         </aside>
+        
+        <!-- ============================================ -->
+        <!-- OVERLAY PARA MÓVIL                           -->
+        <!-- ============================================ -->
         <div class="sidebar-overlay" id="sidebarOverlay"></div>
+        
+        <!-- ============================================ -->
+        <!-- CONTENIDO PRINCIPAL                          -->
+        <!-- ============================================ -->
         <main class="main-content">
             <header class="main-header">
                 <button class="menu-toggle" id="menuToggle">☰</button>
@@ -38,17 +70,100 @@
                     <div class="user-avatar" id="userAvatar">👤</div>
                 </div>
             </header>
+            
+            <!-- Contenedor dinámico para las páginas -->
             <div id="page-content" class="page-content">
-                <div class="loader"><div class="loader-spinner"></div></div>
+                <div class="loader" id="loader">
+                    <div class="loader-spinner"></div>
+                    <p>Cargando...</p>
+                </div>
             </div>
         </main>
     </div>
 
-    <!-- IMPORTANTE: Cambiar a type="module" y orden correcto -->
+    <!-- ============================================ -->
+    <!-- SCRIPTS - ORDEN CORRECTO (MODULE)            -->
+    <!-- 1. Configuración de Appwrite                -->
+    <!-- 2. Autenticación (depende de config)        -->
+    <!-- 3. Lógica de laboratorios                   -->
+    <!-- 4. Router (depende de auth)                 -->
+    <!-- 5. App (inicialización principal)           -->
+    <!-- ============================================ -->
+    
     <script type="module" src="js/appwrite-config.js"></script>
     <script type="module" src="js/auth.js"></script>
     <script type="module" src="js/labs.js"></script>
     <script type="module" src="js/router.js"></script>
     <script type="module" src="js/app.js"></script>
+    
+    <!-- ============================================ -->
+    <!-- SCRIPT DE INICIALIZACIÓN ADICIONAL           -->
+    <!-- Para funciones que necesitan DOM listo       -->
+    <!-- ============================================ -->
+    <script type="module">
+        // Este script asegura que el cierre de sesión funcione
+        import { cerrarSesion, actualizarUIGlobal, obtenerUsuarioActual } from './js/auth.js';
+        
+        // Configurar el botón de cierre de sesión
+        const logoutLink = document.getElementById('logoutNavLink');
+        if (logoutLink) {
+            logoutLink.addEventListener('click', async (e) => {
+                e.preventDefault();
+                await cerrarSesion();
+                // Actualizar UI después de cerrar sesión
+                actualizarUIGlobal();
+                // Redirigir a inicio
+                if (typeof window.cambiarPagina === 'function') {
+                    window.cambiarPagina('inicio');
+                } else {
+                    window.location.hash = 'inicio';
+                }
+            });
+        }
+        
+        // Menú toggle para móvil
+        const menuToggle = document.getElementById('menuToggle');
+        const sidebar = document.getElementById('sidebar');
+        const overlay = document.getElementById('sidebarOverlay');
+        
+        if (menuToggle && sidebar && overlay) {
+            menuToggle.addEventListener('click', () => {
+                sidebar.classList.toggle('open');
+                overlay.classList.toggle('active');
+            });
+            
+            overlay.addEventListener('click', () => {
+                sidebar.classList.remove('open');
+                overlay.classList.remove('active');
+            });
+        }
+        
+        // Escuchar cambios de autenticación para actualizar el menú
+        document.addEventListener('authChanged', (event) => {
+            console.log('🔄 Evento authChanged recibido');
+            actualizarUIGlobal();
+            
+            // Actualizar userName en el header
+            const user = obtenerUsuarioActual();
+            const userNameSpan = document.getElementById('userName');
+            if (userNameSpan) {
+                let nombre = user?.nombre || 'Invitado';
+                if (user && !user.emailVerificado) {
+                    nombre += ' (⚠️ verificar email)';
+                }
+                userNameSpan.textContent = nombre;
+            }
+        });
+        
+        // Ocultar loader cuando la página esté lista
+        window.addEventListener('load', () => {
+            const loader = document.getElementById('loader');
+            if (loader) {
+                setTimeout(() => {
+                    loader.style.display = 'none';
+                }, 500);
+            }
+        });
+    </script>
 </body>
 </html>
