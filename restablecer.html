@@ -1,0 +1,446 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Restablecer Contraseña - AXON-LAB</title>
+    <link rel="stylesheet" href="../css/estilo.css">
+    <link rel="stylesheet" href="../css/layout.css">
+    <link rel="stylesheet" href="../css/componentes.css">
+    <style>
+        /* Estilos específicos para la página de restablecimiento */
+        .reset-container {
+            min-height: 80vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 2rem;
+        }
+        
+        .reset-card {
+            max-width: 450px;
+            width: 100%;
+            background: white;
+            border-radius: 16px;
+            padding: 2rem;
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+            animation: fadeInUp 0.5s ease;
+        }
+        
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        
+        .reset-header {
+            text-align: center;
+            margin-bottom: 2rem;
+        }
+        
+        .reset-header h1 {
+            color: #1f2937;
+            margin-bottom: 0.5rem;
+        }
+        
+        .reset-header p {
+            color: #6b7280;
+            font-size: 0.875rem;
+        }
+        
+        .form-group {
+            margin-bottom: 1.25rem;
+        }
+        
+        .form-label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-weight: 500;
+            color: #374151;
+        }
+        
+        .form-label.required::after {
+            content: '*';
+            color: #ef4444;
+            margin-left: 0.25rem;
+        }
+        
+        .form-input {
+            width: 100%;
+            padding: 0.75rem;
+            border: 1px solid #d1d5db;
+            border-radius: 8px;
+            font-size: 1rem;
+            transition: border-color 0.2s, box-shadow 0.2s;
+        }
+        
+        .form-input:focus {
+            outline: none;
+            border-color: #007bff;
+            box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.1);
+        }
+        
+        .form-help {
+            display: block;
+            margin-top: 0.25rem;
+            font-size: 0.75rem;
+            color: #6b7280;
+        }
+        
+        .btn {
+            width: 100%;
+            padding: 0.75rem;
+            border: none;
+            border-radius: 8px;
+            font-size: 1rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        
+        .btn-primary {
+            background: #007bff;
+            color: white;
+        }
+        
+        .btn-primary:hover {
+            background: #0056b3;
+        }
+        
+        .btn-primary:disabled {
+            background: #9ca3af;
+            cursor: not-allowed;
+        }
+        
+        .alert {
+            padding: 0.75rem;
+            border-radius: 8px;
+            margin-top: 1rem;
+            font-size: 0.875rem;
+        }
+        
+        .alert-success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        
+        .alert-error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        
+        .alert-info {
+            background: #d1ecf1;
+            color: #0c5460;
+            border: 1px solid #bee5eb;
+        }
+        
+        .password-requirements {
+            background: #f9fafb;
+            padding: 0.75rem;
+            border-radius: 8px;
+            margin-top: 0.5rem;
+            font-size: 0.75rem;
+        }
+        
+        .password-requirements ul {
+            margin: 0.25rem 0 0 1rem;
+            padding: 0;
+        }
+        
+        .password-requirements li {
+            margin: 0.25rem 0;
+            color: #6b7280;
+        }
+        
+        .password-requirements li.valid {
+            color: #10b981;
+            text-decoration: line-through;
+        }
+        
+        .btn-link {
+            background: none;
+            border: none;
+            color: #007bff;
+            cursor: pointer;
+            font-size: 0.875rem;
+            margin-top: 1rem;
+            width: auto;
+        }
+        
+        .btn-link:hover {
+            text-decoration: underline;
+        }
+    </style>
+</head>
+<body>
+    <div class="reset-container">
+        <div class="reset-card">
+            <div class="reset-header">
+                <h1>🔐 Restablecer contraseña</h1>
+                <p>Ingresa tu nueva contraseña</p>
+            </div>
+            
+            <!-- Estado: Cargando parámetros -->
+            <div id="estadoCargando" style="text-align: center; padding: 2rem;">
+                <div>⏳ Verificando enlace...</div>
+            </div>
+            
+            <!-- Estado: Formulario para nueva contraseña -->
+            <div id="estadoFormulario" style="display: none;">
+                <form id="formRestablecer">
+                    <div class="form-group">
+                        <label class="form-label required">Nueva contraseña</label>
+                        <input type="password" id="nuevaPassword" class="form-input" placeholder="Mínimo 8 caracteres" required>
+                        <div class="password-requirements" id="requisitosPassword">
+                            <small>Requisitos:</small>
+                            <ul>
+                                <li id="reqLongitud">✓ Mínimo 8 caracteres</li>
+                                <li id="reqMayuscula">✓ Al menos una mayúscula</li>
+                                <li id="reqNumero">✓ Al menos un número</li>
+                            </ul>
+                        </div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label class="form-label required">Confirmar nueva contraseña</label>
+                        <input type="password" id="confirmarPassword" class="form-input" placeholder="Repite tu nueva contraseña" required>
+                    </div>
+                    
+                    <button type="submit" class="btn btn-primary" id="btnRestablecer">✅ Restablecer contraseña</button>
+                    <div id="msgRestablecer"></div>
+                </form>
+            </div>
+            
+            <!-- Estado: Éxito -->
+            <div id="estadoExito" style="display: none; text-align: center;">
+                <div style="font-size: 4rem; margin-bottom: 1rem;">✅</div>
+                <h2>¡Contraseña actualizada!</h2>
+                <p>Tu contraseña ha sido restablecida exitosamente.</p>
+                <button id="btnIrLogin" class="btn btn-primary">🔐 Iniciar sesión</button>
+            </div>
+            
+            <!-- Estado: Error -->
+            <div id="estadoError" style="display: none; text-align: center;">
+                <div style="font-size: 4rem; margin-bottom: 1rem;">❌</div>
+                <h2>Enlace inválido o expirado</h2>
+                <p>El enlace de recuperación ha expirado o no es válido.</p>
+                <button id="btnVolverLogin" class="btn btn-primary">← Volver al inicio de sesión</button>
+                <button id="btnSolicitarNuevo" class="btn-link">Solicitar un nuevo enlace</button>
+            </div>
+        </div>
+    </div>
+
+    <script type="module">
+        import { restablecerPassword, recuperarPassword } from '../js/auth.js';
+        
+        // ============================================
+        // OBTENER PARÁMETROS DE LA URL
+        // ============================================
+        function obtenerParametrosURL() {
+            const params = new URLSearchParams(window.location.search);
+            return {
+                userId: params.get('userId'),
+                secret: params.get('secret'),
+                expire: params.get('expire')
+            };
+        }
+        
+        // ============================================
+        // VALIDAR FORMATO DE CONTRASEÑA
+        // ============================================
+        function validarPassword(password) {
+            const tieneLongitud = password.length >= 8;
+            const tieneMayuscula = /[A-Z]/.test(password);
+            const tieneNumero = /\d/.test(password);
+            
+            return {
+                valida: tieneLongitud && tieneMayuscula && tieneNumero,
+                longitud: tieneLongitud,
+                mayuscula: tieneMayuscula,
+                numero: tieneNumero
+            };
+        }
+        
+        function actualizarRequisitos(password) {
+            const validacion = validarPassword(password);
+            
+            const reqLongitud = document.getElementById('reqLongitud');
+            const reqMayuscula = document.getElementById('reqMayuscula');
+            const reqNumero = document.getElementById('reqNumero');
+            
+            if (reqLongitud) {
+                reqLongitud.style.color = validacion.longitud ? '#10b981' : '#6b7280';
+                reqLongitud.style.textDecoration = validacion.longitud ? 'line-through' : 'none';
+            }
+            if (reqMayuscula) {
+                reqMayuscula.style.color = validacion.mayuscula ? '#10b981' : '#6b7280';
+                reqMayuscula.style.textDecoration = validacion.mayuscula ? 'line-through' : 'none';
+            }
+            if (reqNumero) {
+                reqNumero.style.color = validacion.numero ? '#10b981' : '#6b7280';
+                reqNumero.style.textDecoration = validacion.numero ? 'line-through' : 'none';
+            }
+            
+            return validacion;
+        }
+        
+        // ============================================
+        // INICIALIZAR
+        // ============================================
+        const params = obtenerParametrosURL();
+        const estadoCargando = document.getElementById('estadoCargando');
+        const estadoFormulario = document.getElementById('estadoFormulario');
+        const estadoExito = document.getElementById('estadoExito');
+        const estadoError = document.getElementById('estadoError');
+        
+        // Verificar si los parámetros existen
+        if (!params.userId || !params.secret) {
+            // No hay parámetros válidos - mostrar error
+            estadoCargando.style.display = 'none';
+            estadoError.style.display = 'block';
+        } else {
+            // Parámetros presentes - mostrar formulario
+            estadoCargando.style.display = 'none';
+            estadoFormulario.style.display = 'block';
+        }
+        
+        // ============================================
+        // VALIDACIÓN DE CONTRASEÑA EN TIEMPO REAL
+        // ============================================
+        const nuevaPasswordInput = document.getElementById('nuevaPassword');
+        const confirmarPasswordInput = document.getElementById('confirmarPassword');
+        
+        if (nuevaPasswordInput) {
+            nuevaPasswordInput.addEventListener('input', (e) => {
+                actualizarRequisitos(e.target.value);
+                // También verificar coincidencia si confirmar tiene valor
+                if (confirmarPasswordInput.value) {
+                    checkPasswordsMatch();
+                }
+            });
+        }
+        
+        function checkPasswordsMatch() {
+            const nueva = nuevaPasswordInput?.value || '';
+            const confirmar = confirmarPasswordInput?.value || '';
+            
+            if (confirmar && nueva !== confirmar) {
+                confirmarPasswordInput.setCustomValidity('Las contraseñas no coinciden');
+            } else {
+                confirmarPasswordInput.setCustomValidity('');
+            }
+        }
+        
+        if (confirmarPasswordInput) {
+            confirmarPasswordInput.addEventListener('input', checkPasswordsMatch);
+        }
+        
+        // ============================================
+        // ENVIAR NUEVA CONTRASEÑA
+        // ============================================
+        const formRestablecer = document.getElementById('formRestablecer');
+        const msgRestablecer = document.getElementById('msgRestablecer');
+        
+        if (formRestablecer) {
+            formRestablecer.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                
+                const nuevaPassword = nuevaPasswordInput.value;
+                const confirmarPassword = confirmarPasswordInput.value;
+                
+                // Validar requisitos
+                const validacion = validarPassword(nuevaPassword);
+                if (!validacion.valida) {
+                    msgRestablecer.innerHTML = '<div class="alert alert-error">⚠️ La contraseña no cumple con los requisitos mínimos</div>';
+                    return;
+                }
+                
+                // Validar coincidencia
+                if (nuevaPassword !== confirmarPassword) {
+                    msgRestablecer.innerHTML = '<div class="alert alert-error">⚠️ Las contraseñas no coinciden</div>';
+                    return;
+                }
+                
+                // Deshabilitar botón
+                const btn = formRestablecer.querySelector('button');
+                const originalText = btn.textContent;
+                btn.textContent = '⏳ Procesando...';
+                btn.disabled = true;
+                
+                const result = await restablecerPassword(
+                    params.userId,
+                    params.secret,
+                    nuevaPassword,
+                    confirmarPassword
+                );
+                
+                if (result.success) {
+                    msgRestablecer.innerHTML = `<div class="alert alert-success">✅ ${result.message}</div>`;
+                    
+                    // Mostrar pantalla de éxito después de 1.5 segundos
+                    setTimeout(() => {
+                        estadoFormulario.style.display = 'none';
+                        estadoExito.style.display = 'block';
+                    }, 1500);
+                } else {
+                    msgRestablecer.innerHTML = `<div class="alert alert-error">❌ ${result.message}</div>`;
+                    btn.textContent = originalText;
+                    btn.disabled = false;
+                }
+            });
+        }
+        
+        // ============================================
+        // BOTONES DE NAVEGACIÓN
+        // ============================================
+        
+        // Ir a login desde éxito
+        const btnIrLogin = document.getElementById('btnIrLogin');
+        if (btnIrLogin) {
+            btnIrLogin.addEventListener('click', () => {
+                window.location.href = '/AXON-LAB/';
+                window.location.hash = 'login';
+            });
+        }
+        
+        // Volver a login desde error
+        const btnVolverLogin = document.getElementById('btnVolverLogin');
+        if (btnVolverLogin) {
+            btnVolverLogin.addEventListener('click', () => {
+                window.location.href = '/AXON-LAB/';
+                window.location.hash = 'login';
+            });
+        }
+        
+        // Solicitar nuevo enlace
+        const btnSolicitarNuevo = document.getElementById('btnSolicitarNuevo');
+        if (btnSolicitarNuevo) {
+            // Crear modal simple para solicitar email
+            btnSolicitarNuevo.addEventListener('click', () => {
+                const email = prompt('Ingresa tu correo electrónico para recibir un nuevo enlace de recuperación:');
+                if (email && email.includes('@')) {
+                    recuperarPassword(email).then(result => {
+                        if (result.success) {
+                            alert('✅ Se ha enviado un nuevo enlace a tu correo electrónico.');
+                            window.location.href = '/AXON-LAB/';
+                            window.location.hash = 'login';
+                        } else {
+                            alert('❌ ' + result.message);
+                        }
+                    });
+                } else if (email) {
+                    alert('⚠️ Por favor, ingresa un correo electrónico válido.');
+                }
+            });
+        }
+    </script>
+</body>
+</html>
