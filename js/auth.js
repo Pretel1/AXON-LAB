@@ -1,4 +1,4 @@
-// js/auth.js - Versión completa con Appwrite + Google OAuth
+// js/auth.js - VERSIÓN COMPLETA CON VERIFICACIÓN + RECUPERACIÓN
 import { account, ID } from './appwrite-config.js';
 import { setCurrentUser } from './labs.js';
 
@@ -10,38 +10,40 @@ let currentUser = null;
 // ============================================
 export async function initAuth() {
     try {
-        // Intentar obtener sesión actual de Appwrite
         const user = await account.get();
         currentUser = {
             id: user.$id,
             nombre: user.name || user.email,
-            email: user.email
+            email: user.email,
+            emailVerificado: user.emailVerification || false
         };
-        // Sincronizar con labs.js
         setCurrentUser(currentUser);
-        // Actualizar UI si existe la función
-        if (window.updateUI) window.updateUI(currentUser.nombre);
+        
+        // Actualizar UI
+        if (window.updateUIGlobal) window.updateUIGlobal();
+        
         console.log('✅ Usuario autenticado:', currentUser.email);
+        console.log('📧 Email verificado:', currentUser.emailVerificado);
+        
         return currentUser;
     } catch (error) {
-        // No hay sesión activa (error 401 es normal)
         currentUser = null;
         setCurrentUser(null);
-        if (window.updateUI) window.updateUI(null);
+        if (window.updateUIGlobal) window.updateUIGlobal();
         console.log('👤 No hay sesión activa');
         return null;
     }
 }
 
 // ============================================
-// REGISTRAR USUARIO
+// REGISTRAR USUARIO (Con verificación opcional)
 // ============================================
 export async function registrarUsuario(nombre, email, password) {
-    // Validar contraseña (Appwrite requiere mínimo 8 caracteres)
+    // Validar contraseña
     if (!password || password.length < 8) {
         return { 
             success: false, 
-            message: 'La contraseña debe tener al menos 8 caracteres.' 
+            message: '⚠️ La contraseña debe tener al menos 8 caracteres.' 
         };
     }
     
@@ -54,34 +56,97 @@ export async function registrarUsuario(nombre, email, password) {
             nombre
         );
         
-        console.log('Usuario creado:', response);
+        console.log('✅ Usuario creado:', response.$id);
         
-        // Iniciar sesión automáticamente después del registro
-        const loginResult = await iniciarSesion(email, password);
-        
-        if (loginResult.success) {
-            return { 
-                success: true, 
-                message: 'Registro exitoso. ¡Bienvenido a AXON-LAB!' 
-            };
-        } else {
-            return { 
-                success: true, 
-                message: 'Registro exitoso. Ahora puedes iniciar sesión.' 
-            };
+        // ============================================
+        // SI SMSTÁ CONFIGURADO: Enviar verificación por email
+        // ============================================
+        try {
+            // Appwrite envía automáticamente email de verificación
+            // si SMTP está configurado y emailVerification está habilitado
+            await account.createVerification(
+                'https://pretel1.github.io/AXON-LAB/pages/verificacion.html'
+            );
+            console.log('📧 Email de verificación enviado');
+        } catch (verifyError) {
+            console.log('ℹ️ Verificación no enviada (SMTP no configurado o ya verificado)');
         }
+        
+        return { 
+            success: true, 
+            message: '✅ ¡Registro exitoso! Se ha enviado un código de verificación a tu correo.',
+            userId: response.$id,
+            requiereVerificacion: true
+        };
         
     } catch (error) {
-        console.error('Error en registro:', error);
+        console.error('❌ Error en registro:', error);
         
-        // Manejar errores comunes de Appwrite
         if (error.code === 409) {
-            return { success: false, message: 'El correo ya está registrado.' };
+            return { success: false, message: '❌ El correo ya está registrado.' };
         }
         if (error.code === 400) {
-            return { success: false, message: 'Datos inválidos. Verifica tu correo y contraseña.' };
+            return { success: false, message: '❌ Datos inválidos. Verifica tu correo y contraseña.' };
         }
-        return { success: false, message: error.message || 'Error en el registro.' };
+        return { success: false, message: `❌ ${error.message || 'Error en el registro.'}` };
+    }
+}
+
+// ============================================
+// VERIFICAR EMAIL CON CÓDIGO
+// ============================================
+export async function verificarEmail(codigo, userId) {
+    try {
+        // Obtener usuario si no se proporcionó
+        let usuarioId = userId;
+        if (!usuarioId) {
+            const user = await account.get();
+            usuarioId = user.$id;
+        }
+        
+        // Verificar el código
+        await account.updateVerification(usuarioId, codigo);
+        
+        console.log('✅ Email verificado correctamente');
+        
+        // Actualizar estado local
+        if (currentUser) {
+            currentUser.emailVerificado = true;
+        }
+        
+        return { 
+            success: true, 
+            message: '✅ ¡Email verificado exitosamente! Ahora puedes acceder a todas las funciones.' 
+        };
+        
+    } catch (error) {
+        console.error('❌ Error en verificación:', error);
+        
+        if (error.code === 400) {
+            return { success: false, message: '❌ Código de verificación inválido o expirado.' };
+        }
+        return { success: false, message: `❌ ${error.message || 'Error al verificar email.'}` };
+    }
+}
+
+// ============================================
+// REENVIAR CÓDIGO DE VERIFICACIÓN
+// ============================================
+export async function reenviarCodigoVerificacion() {
+    try {
+        await account.createVerification(
+            'https://pretel1.github.io/AXON-LAB/pages/verificacion.html'
+        );
+        return { 
+            success: true, 
+            message: '📧 Se ha reenviado el código de verificación a tu correo.' 
+        };
+    } catch (error) {
+        console.error('❌ Error al reenviar código:', error);
+        return { 
+            success: false, 
+            message: '❌ No se pudo reenviar el código. Intenta más tarde.' 
+        };
     }
 }
 
@@ -89,58 +154,127 @@ export async function registrarUsuario(nombre, email, password) {
 // INICIAR SESIÓN CON EMAIL/PASSWORD
 // ============================================
 export async function iniciarSesion(email, password) {
-    // Validar campos
     if (!email || !password) {
         return { 
             success: false, 
-            message: 'Correo y contraseña son requeridos.' 
+            message: '⚠️ Correo y contraseña son requeridos.' 
         };
     }
     
     try {
-        // Crear sesión en Appwrite
+        // Crear sesión
         const session = await account.createEmailPasswordSession(email, password);
-        console.log('Sesión creada:', session);
+        console.log('✅ Sesión creada:', session.$id);
         
-        // Obtener datos completos del usuario
+        // Obtener datos del usuario
         const user = await account.get();
         
         currentUser = {
             id: user.$id,
             nombre: user.name || user.email,
-            email: user.email
+            email: user.email,
+            emailVerificado: user.emailVerification || false
         };
         
-        // Sincronizar con labs.js
         setCurrentUser(currentUser);
-        
-        // Guardar en sessionStorage para persistencia entre recargas
         sessionStorage.setItem('currentUser', JSON.stringify(currentUser));
         
-        // Actualizar UI si existe la función
-        if (window.updateUI) window.updateUI(currentUser.nombre);
-        
-        // Disparar evento de autenticación
+        // Actualizar UI
+        if (window.updateUIGlobal) window.updateUIGlobal();
         document.dispatchEvent(new CustomEvent('authChanged', { detail: { user: currentUser } }));
+        
+        // Mensaje según verificación
+        let mensaje = `🎉 ¡Bienvenido, ${currentUser.nombre}!`;
+        if (!currentUser.emailVerificado) {
+            mensaje += ' ⚠️ Por favor, verifica tu email para acceder a todas las funciones.';
+        }
         
         return { 
             success: true, 
-            message: `¡Bienvenido, ${currentUser.nombre}!` 
+            message: mensaje,
+            emailVerificado: currentUser.emailVerificado
         };
         
     } catch (error) {
-        console.error('Error en login:', error);
+        console.error('❌ Error en login:', error);
         
-        // Manejar errores comunes
         if (error.code === 401) {
-            return { success: false, message: 'Correo o contraseña incorrectos.' };
+            return { success: false, message: '❌ Correo o contraseña incorrectos.' };
         }
         if (error.code === 404) {
-            return { success: false, message: 'Usuario no encontrado.' };
+            return { success: false, message: '❌ Usuario no encontrado.' };
         }
         return { 
             success: false, 
-            message: 'Error al iniciar sesión. Intenta nuevamente.' 
+            message: '❌ Error al iniciar sesión. Intenta nuevamente.' 
+        };
+    }
+}
+
+// ============================================
+// RECUPERAR CONTRASEÑA - ENVIAR EMAIL
+// ============================================
+export async function recuperarPassword(email) {
+    if (!email) {
+        return { success: false, message: '⚠️ Ingresa tu correo electrónico.' };
+    }
+    
+    try {
+        // Enviar email de recuperación
+        await account.createRecovery(
+            email,
+            'https://pretel1.github.io/AXON-LAB/pages/restablecer.html'
+        );
+        
+        console.log('📧 Email de recuperación enviado a:', email);
+        
+        return { 
+            success: true, 
+            message: '📧 Se ha enviado un enlace de recuperación a tu correo. Revisa tu bandeja de entrada y spam.' 
+        };
+        
+    } catch (error) {
+        console.error('❌ Error en recuperación:', error);
+        
+        if (error.code === 404) {
+            return { success: false, message: '❌ No existe una cuenta con ese correo.' };
+        }
+        return { 
+            success: false, 
+            message: '❌ No se pudo enviar el email de recuperación. Intenta más tarde.' 
+        };
+    }
+}
+
+// ============================================
+// RESTABLECER CONTRASEÑA (después del email)
+// ============================================
+export async function restablecerPassword(userId, secret, newPassword, confirmPassword) {
+    // Validar contraseñas
+    if (newPassword !== confirmPassword) {
+        return { success: false, message: '⚠️ Las contraseñas no coinciden.' };
+    }
+    
+    if (newPassword.length < 8) {
+        return { success: false, message: '⚠️ La contraseña debe tener al menos 8 caracteres.' };
+    }
+    
+    try {
+        // Actualizar contraseña
+        await account.updateRecovery(userId, secret, newPassword, confirmPassword);
+        
+        console.log('✅ Contraseña restablecida correctamente');
+        
+        return { 
+            success: true, 
+            message: '✅ ¡Contraseña restablecida exitosamente! Ahora puedes iniciar sesión con tu nueva contraseña.' 
+        };
+        
+    } catch (error) {
+        console.error('❌ Error al restablecer:', error);
+        return { 
+            success: false, 
+            message: '❌ Enlace inválido o expirado. Solicita un nuevo restablecimiento.' 
         };
     }
 }
@@ -150,18 +284,16 @@ export async function iniciarSesion(email, password) {
 // ============================================
 export async function iniciarSesionConGoogle() {
     try {
-        // Redirigir a Google OAuth
-        // Los parámetros son: provider, success URL, failure URL
         await account.createOAuth2Session(
             'google',
             'https://pretel1.github.io/AXON-LAB/',
             'https://pretel1.github.io/AXON-LAB/login.html'
         );
     } catch (error) {
-        console.error('Error en login con Google:', error);
+        console.error('❌ Error en login con Google:', error);
         return { 
             success: false, 
-            message: 'Error al iniciar sesión con Google.' 
+            message: '❌ Error al iniciar sesión con Google.' 
         };
     }
 }
@@ -171,21 +303,15 @@ export async function iniciarSesionConGoogle() {
 // ============================================
 export async function cerrarSesion() {
     try {
-        // Cerrar sesión en Appwrite
         await account.deleteSession('current');
         
-        // Limpiar variables locales
         currentUser = null;
         setCurrentUser(null);
         sessionStorage.removeItem('currentUser');
         
-        // Actualizar UI si existe la función
-        if (window.updateUI) window.updateUI(null);
-        
-        // Disparar evento de autenticación
+        if (window.updateUIGlobal) window.updateUIGlobal();
         document.dispatchEvent(new CustomEvent('authChanged', { detail: { user: null } }));
         
-        // Redirigir a inicio si existe la función
         if (typeof window.cambiarPagina === 'function') {
             window.cambiarPagina('inicio');
         } else {
@@ -196,19 +322,17 @@ export async function cerrarSesion() {
         return { success: true, message: 'Sesión cerrada' };
         
     } catch (error) {
-        console.error('Error al cerrar sesión:', error);
+        console.error('❌ Error al cerrar sesión:', error);
         return { success: false, message: error.message };
     }
 }
 
 // ============================================
-// OBTENER USUARIO ACTUAL (SÍNCRONO)
+// OBTENER USUARIO ACTUAL
 // ============================================
 export function obtenerUsuarioActual() {
-    // Primero intentar desde memoria
     if (currentUser) return currentUser;
     
-    // Si no, intentar desde sessionStorage
     const stored = sessionStorage.getItem('currentUser');
     if (stored) {
         try {
@@ -224,22 +348,18 @@ export function obtenerUsuarioActual() {
 }
 
 // ============================================
+// VERIFICAR SI EL EMAIL ESTÁ VERIFICADO
+// ============================================
+export function emailEstaVerificado() {
+    const user = obtenerUsuarioActual();
+    return user?.emailVerificado === true;
+}
+
+// ============================================
 // VERIFICAR SI HAY SESIÓN ACTIVA
 // ============================================
 export function haySesionActiva() {
     return obtenerUsuarioActual() !== null;
-}
-
-// ============================================
-// VERIFICAR AUTENTICACIÓN (ASÍNCRONO)
-// ============================================
-export async function isAuthenticated() {
-    try {
-        const user = await account.get();
-        return true;
-    } catch {
-        return false;
-    }
 }
 
 // ============================================
@@ -252,7 +372,11 @@ export function actualizarUIGlobal() {
     // Actualizar nombre en header
     const userNameSpan = document.getElementById('userName');
     if (userNameSpan) {
-        userNameSpan.textContent = user?.nombre || 'Invitado';
+        let nombreMostrar = user?.nombre || 'Invitado';
+        if (user && !user.emailVerificado) {
+            nombreMostrar += ' ⚠️';
+        }
+        userNameSpan.textContent = nombreMostrar;
     }
     
     // Actualizar enlaces del menú
@@ -277,11 +401,15 @@ window.obtenerUsuarioActual = obtenerUsuarioActual;
 window.haySesionActiva = haySesionActiva;
 window.iniciarSesionConGoogle = iniciarSesionConGoogle;
 window.actualizarUIGlobal = actualizarUIGlobal;
+window.verificarEmail = verificarEmail;
+window.reenviarCodigoVerificacion = reenviarCodigoVerificacion;
+window.recuperarPassword = recuperarPassword;
+window.restablecerPassword = restablecerPassword;
+window.emailEstaVerificado = emailEstaVerificado;
 
 // ============================================
 // INICIALIZAR AL CARGAR
 // ============================================
-// Inicializar autenticación cuando el DOM esté listo
 if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', () => {
         initAuth().then(() => {
@@ -294,4 +422,4 @@ if (document.readyState === 'loading') {
     });
 }
 
-console.log('✅ Auth.js cargado con Appwrite + Google OAuth');
+console.log('✅ Auth.js cargado con Appwrite + Google OAuth + Verificación + Recuperación');
