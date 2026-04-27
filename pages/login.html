@@ -1,15 +1,22 @@
 <div class="form-card">
     <h2>🔑 Iniciar Sesión</h2>
+    <p>Accede a tu cuenta de AXON-LAB</p>
+    
     <form id="formLogin">
         <div class="form-group">
-            <label>Correo electrónico</label>
-            <input type="email" id="loginEmail" required>
+            <label class="form-label required">Correo electrónico</label>
+            <input type="email" id="loginEmail" class="form-input" placeholder="ejemplo@correo.com" required>
         </div>
+        
         <div class="form-group">
-            <label>Contraseña</label>
-            <input type="password" id="loginPassword" required>
+            <label class="form-label required">Contraseña</label>
+            <input type="password" id="loginPassword" class="form-input" placeholder="Ingresa tu contraseña" required>
+            <div class="form-help">
+                <a href="#" id="btnOlvidePassword" class="link-recuperar">¿Olvidaste tu contraseña?</a>
+            </div>
         </div>
-        <button type="submit" class="btn">Ingresar</button>
+        
+        <button type="submit" class="btn btn-primary" id="btnIngresar">🔐 Ingresar</button>
         <div id="msgLogin"></div>
     </form>
     
@@ -28,9 +35,196 @@
     <p>¿No tienes cuenta? <a href="#" onclick="window.cambiarPagina('registro'); return false;">Regístrate aquí</a></p>
 </div>
 
-<script type="module">
-    import { iniciarSesion, iniciarSesionConGoogle } from '../js/auth.js';
+<!-- ========================================== -->
+<!-- MODAL: RECUPERAR CONTRASEÑA -->
+<!-- ========================================== -->
+<div id="modalRecuperar" class="modal" style="display: none;">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h3>🔐 Recuperar contraseña</h3>
+            <button class="modal-close" id="btnCerrarModal">&times;</button>
+        </div>
+        <div class="modal-body">
+            <p>Ingresa tu correo electrónico y te enviaremos un enlace para restablecer tu contraseña.</p>
+            
+            <form id="formRecuperar">
+                <div class="form-group">
+                    <label class="form-label required">Correo electrónico</label>
+                    <input type="email" id="recuperarEmail" class="form-input" placeholder="ejemplo@correo.com" required>
+                </div>
+                
+                <button type="submit" class="btn btn-primary" id="btnEnviarRecuperacion">📧 Enviar enlace de recuperación</button>
+                <div id="msgRecuperar"></div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<style>
+    /* Estilos para el modal */
+    .modal {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0, 0, 0, 0.5);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 1000;
+    }
     
+    .modal-content {
+        background: white;
+        border-radius: 12px;
+        max-width: 450px;
+        width: 90%;
+        box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+        animation: modalFadeIn 0.3s ease;
+    }
+    
+    @keyframes modalFadeIn {
+        from {
+            opacity: 0;
+            transform: translateY(-20px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+    
+    .modal-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 1rem 1.5rem;
+        border-bottom: 1px solid #e5e7eb;
+    }
+    
+    .modal-header h3 {
+        margin: 0;
+        color: #1f2937;
+    }
+    
+    .modal-close {
+        background: none;
+        border: none;
+        font-size: 1.5rem;
+        cursor: pointer;
+        color: #6b7280;
+        transition: color 0.2s;
+    }
+    
+    .modal-close:hover {
+        color: #1f2937;
+    }
+    
+    .modal-body {
+        padding: 1.5rem;
+    }
+    
+    .link-recuperar {
+        color: #007bff;
+        text-decoration: none;
+        font-size: 0.875rem;
+        cursor: pointer;
+    }
+    
+    .link-recuperar:hover {
+        text-decoration: underline;
+    }
+    
+    .form-help {
+        margin-top: 0.25rem;
+        text-align: right;
+    }
+    
+    .alert {
+        padding: 0.75rem;
+        border-radius: 6px;
+        margin-top: 1rem;
+        font-size: 0.875rem;
+    }
+    
+    .alert-success {
+        background: #d4edda;
+        color: #155724;
+        border: 1px solid #c3e6cb;
+    }
+    
+    .alert-error {
+        background: #f8d7da;
+        color: #721c24;
+        border: 1px solid #f5c6cb;
+    }
+    
+    .alert-info {
+        background: #d1ecf1;
+        color: #0c5460;
+        border: 1px solid #bee5eb;
+    }
+    
+    .btn-primary {
+        background: #007bff;
+        color: white;
+        width: 100%;
+    }
+    
+    .btn-primary:hover {
+        background: #0056b3;
+    }
+    
+    .divider {
+        text-align: center;
+        margin: 1rem 0;
+        position: relative;
+    }
+    
+    .divider::before,
+    .divider::after {
+        content: '';
+        position: absolute;
+        top: 50%;
+        width: 45%;
+        height: 1px;
+        background: #e5e7eb;
+    }
+    
+    .divider::before {
+        left: 0;
+    }
+    
+    .divider::after {
+        right: 0;
+    }
+    
+    .btn-google {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 0.75rem;
+        width: 100%;
+        padding: 0.75rem;
+        border: 1px solid #e5e7eb;
+        border-radius: 8px;
+        background: white;
+        cursor: pointer;
+        transition: background 0.2s;
+    }
+    
+    .btn-google:hover {
+        background: #f9fafb;
+    }
+</style>
+
+<script type="module">
+    import { iniciarSesion, iniciarSesionConGoogle, recuperarPassword } from '../js/auth.js';
+    
+    // ============================================
+    // LOGIN CON EMAIL/PASSWORD
+    // ============================================
     const form = document.getElementById('formLogin');
     const msgDiv = document.getElementById('msgLogin');
     
@@ -39,6 +233,11 @@
         
         const email = document.getElementById('loginEmail').value.trim();
         const pass = document.getElementById('loginPassword').value;
+        
+        if (!email || !pass) {
+            msgDiv.innerHTML = '<div class="alert alert-error">⚠️ Completa todos los campos</div>';
+            return;
+        }
         
         // Mostrar loading
         const btn = form.querySelector('button[type="submit"]');
@@ -50,21 +249,99 @@
         
         if (result.success) {
             msgDiv.innerHTML = `<div class="alert alert-success">${result.message}</div>`;
+            
+            // Mostrar advertencia si el email no está verificado
+            if (result.emailVerificado === false) {
+                msgDiv.innerHTML += '<div class="alert alert-info">⚠️ Por favor, verifica tu email para acceder a todas las funciones.</div>';
+            }
+            
             setTimeout(() => {
-                if (window.cambiarPagina) window.cambiarPagina('inicio');
-            }, 1500);
+                if (window.cambiarPagina) {
+                    window.cambiarPagina('inicio');
+                } else {
+                    window.location.hash = 'inicio';
+                }
+            }, 2000);
         } else {
-            msgDiv.innerHTML = `<div class="alert alert-error">${result.message}</div>`;
+            msgDiv.innerHTML = `<div class="alert alert-error">❌ ${result.message}</div>`;
             btn.textContent = originalText;
             btn.disabled = false;
         }
     });
     
-    // Botón de Google
+    // ============================================
+    // LOGIN CON GOOGLE
+    // ============================================
     const googleBtn = document.getElementById('googleLoginBtn');
     if (googleBtn) {
         googleBtn.addEventListener('click', async () => {
             await iniciarSesionConGoogle();
         });
     }
+    
+    // ============================================
+    // MODAL DE RECUPERACIÓN DE CONTRASEÑA
+    // ============================================
+    const modal = document.getElementById('modalRecuperar');
+    const btnOlvide = document.getElementById('btnOlvidePassword');
+    const btnCerrarModal = document.getElementById('btnCerrarModal');
+    const formRecuperar = document.getElementById('formRecuperar');
+    const msgRecuperar = document.getElementById('msgRecuperar');
+    
+    // Abrir modal
+    btnOlvide.addEventListener('click', (e) => {
+        e.preventDefault();
+        modal.style.display = 'flex';
+    });
+    
+    // Cerrar modal
+    btnCerrarModal.addEventListener('click', () => {
+        modal.style.display = 'none';
+        msgRecuperar.innerHTML = '';
+        document.getElementById('recuperarEmail').value = '';
+    });
+    
+    // Cerrar modal al hacer clic fuera
+    modal.addEventListener('click', (e) => {
+        if (e.target === modal) {
+            modal.style.display = 'none';
+            msgRecuperar.innerHTML = '';
+            document.getElementById('recuperarEmail').value = '';
+        }
+    });
+    
+    // Enviar recuperación
+    formRecuperar.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        
+        const email = document.getElementById('recuperarEmail').value.trim();
+        
+        if (!email) {
+            msgRecuperar.innerHTML = '<div class="alert alert-error">⚠️ Ingresa tu correo electrónico</div>';
+            return;
+        }
+        
+        // Mostrar loading
+        const btn = formRecuperar.querySelector('button');
+        const originalText = btn.textContent;
+        btn.textContent = '⏳ Enviando...';
+        btn.disabled = true;
+        
+        const result = await recuperarPassword(email);
+        
+        if (result.success) {
+            msgRecuperar.innerHTML = `<div class="alert alert-success">✅ ${result.message}</div>`;
+            
+            // Cerrar modal después de 3 segundos
+            setTimeout(() => {
+                modal.style.display = 'none';
+                msgRecuperar.innerHTML = '';
+                document.getElementById('recuperarEmail').value = '';
+            }, 3000);
+        } else {
+            msgRecuperar.innerHTML = `<div class="alert alert-error">❌ ${result.message}</div>`;
+            btn.textContent = originalText;
+            btn.disabled = false;
+        }
+    });
 </script>
