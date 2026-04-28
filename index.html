@@ -73,12 +73,13 @@
                 </div>
             </header>
 
-            <div id="page-content" class="page-content">
-                <div class="loader" id="loader">
-                    <div class="loader-spinner"></div>
-                    <p style="margin-top: 1rem; color: var(--text-secondary);">Cargando AXON-LAB...</p>
-                </div>
+            <div class="loader" id="loader">
+                <div class="loader-spinner"></div>
+                <p style="margin-top: 1rem; color: var(--text-secondary);">Sincronizando AXON-LAB...</p>
             </div>
+
+            <div id="page-content" class="page-content">
+                </div>
 
             <footer style="text-align: center; padding: 2rem; color: var(--text-muted); font-size: 0.8rem;">
                 &copy; 2026 AXON-LAB | Ingeniería de Ciberseguridad
@@ -89,23 +90,19 @@
     <script type="module" src="js/app.js"></script>
 
     <script type="module">
-        import { cerrarSesion, actualizarUIGlobal, obtenerUsuarioActual } from './js/auth.js';
+        import { cerrarSesion } from './js/auth.js';
         
-        // --- Manejo del Logout ---
-        const logoutBtn = document.getElementById('logoutNavLink');
-        if (logoutBtn) {
-            logoutBtn.addEventListener('click', async (e) => {
-                e.preventDefault();
-                if (confirm('¿Deseas cerrar tu sesión actual?')) {
-                    await cerrarSesion();
-                    // Redirigir a inicio después de logout
-                    window.location.hash = 'inicio';
-                    window.location.reload(); 
-                }
-            });
-        }
+        // --- Logout ---
+        document.getElementById('logoutNavLink')?.addEventListener('click', async (e) => {
+            e.preventDefault();
+            if (confirm('¿Deseas cerrar sesión en AXON-LAB?')) {
+                await cerrarSesion();
+                window.location.hash = 'login';
+                window.location.reload(); 
+            }
+        });
 
-        // --- Manejo del Menú Mobile ---
+        // --- Navegación Mobile ---
         const menuToggle = document.getElementById('menuToggle');
         const sidebar = document.getElementById('sidebar');
         const overlay = document.getElementById('sidebarOverlay');
@@ -115,22 +112,15 @@
             overlay.classList.toggle('active');
         };
 
-        if (menuToggle) menuToggle.addEventListener('click', toggleMenu);
-        if (overlay) overlay.addEventListener('click', toggleMenu);
+        menuToggle?.addEventListener('click', toggleMenu);
+        overlay?.addEventListener('click', toggleMenu);
 
-        // --- Cerrar sidebar al hacer clic en un enlace (Móvil) ---
-        document.querySelectorAll('.nav-link').forEach(link => {
-            link.addEventListener('click', () => {
-                if (window.innerWidth <= 768) {
-                    sidebar.classList.remove('active');
-                    overlay.classList.remove('active');
-                }
-            });
-        });
-
-        // --- Actualización de UI inicial ---
-        window.addEventListener('DOMContentLoaded', () => {
-            actualizarUIGlobal();
+        // Cerrar al navegar
+        document.addEventListener('click', (e) => {
+            if (e.target.closest('.nav-link') && window.innerWidth <= 768) {
+                sidebar.classList.remove('active');
+                overlay.classList.remove('active');
+            }
         });
     </script>
 
