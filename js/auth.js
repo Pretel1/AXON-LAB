@@ -1,214 +1,188 @@
-// js/auth.js - Migrado a Supabase
+// js/auth.js
 import { supabase } from './supabase-config.js';
 import { setCurrentUser } from './labs.js';
 
 let currentUser = null;
 
 // ============================================
+// ESCUCHAR CAMBIOS DE SESIÓN (CLAVE)
+// ============================================
+supabase.auth.onAuthStateChange(async (event, session) => {
+    console.log('🔄 Auth change:', event);
+
+    if (session?.user) {
+        await initAuth();
+    } else {
+        currentUser = null;
+        setCurrentUser(null);
+        actualizarUIGlobal();
+    }
+});
+
+// ============================================
 // INICIALIZAR AUTENTICACIÓN
 // ============================================
 export async function initAuth() {
-    try {
-        const { data: { user }, error } = await supabase.auth.getUser();
-        
-        if (error || !user) {
-            currentUser = null;
-            setCurrentUser(null);
-            if (window.updateUIGlobal) window.updateUIGlobal();
-            console.log('👤 No hay sesión activa');
-            return null;
-        }
-        
-        const { data: profile } = await supabase
-            .from('profiles')
-            .select('*')
-            .eq('id', user.id)
-            .single();
-        
-        currentUser = {
-            id: user.id,
-            nombre: profile?.nombre || user.email,
-            email: user.email,
-            emailVerificado: user.email_confirmed_at !== null
-        };
-        
-        setCurrentUser(currentUser);
-        if (window.updateUIGlobal) window.updateUIGlobal();
-        console.log('✅ Usuario autenticado:', currentUser.email);
-        return currentUser;
-    } catch (error) {
+    const { data: { user } } = await supabase.auth.getUser();
+
+    if (!user) {
         currentUser = null;
         setCurrentUser(null);
-        if (window.updateUIGlobal) window.updateUIGlobal();
-        console.log('👤 No hay sesión activa');
         return null;
     }
+
+    // 🔥 CAMBIO: usar "perfiles"
+    const { data: profile } = await supabase
+        .from('perfiles')
+        .select('*')
+        .eq('id', user.id)
+        .single();
+
+    currentUser = {
+        id: user.id,
+        nombre: profile?.nombre || user.email,
+        email: user.email,
+        emailVerificado: !!user.email_confirmed_at
+    };
+
+    setCurrentUser(currentUser);
+    actualizarUIGlobal();
+
+    return currentUser;
 }
 
 // ============================================
-// REGISTRAR USUARIO
+// REGISTRAR USUARIO (FIX CLAVE)
 // ============================================
 export async function registrarUsuario(nombre, email, password) {
     if (!password || password.length < 8) {
-        return { success: false, message: '⚠️ La contraseña debe tener al menos 8 caracteres.' };
+        return { success: false, message: '⚠️ Mínimo 8 caracteres.' };
     }
-    
+
     try {
         const { data, error } = await supabase.auth.signUp({
-            email: email,
-            password: password,
-            options: {
-                data: { nombre: nombre }
-            }
+            email,
+            password
         });
-        
+
         if (error) throw error;
-        
-        console.log('✅ Usuario creado:', data.user.id);
-        
+
+        // 🔥 CREAR PERFIL (IMPORTANTE)
+        if (data.user) {
+            await supabase.from('perfiles').insert({
+                id: data.user.id,
+                nombre,
+                email
+            });
+        }
+
         return {
             success: true,
-            message: '✅ ¡Registro exitoso! Revisa tu correo para verificar tu cuenta.',
-            userId: data.user.id
+            message: '✅ Revisa tu correo para verificar tu cuenta.'
         };
-        
+
     } catch (error) {
-        console.error('❌ Error en registro:', error);
-        
         if (error.message.includes('already registered')) {
-            return { success: false, message: '❌ El correo ya está registrado.' };
+            return { success: false, message: '❌ Correo ya registrado' };
         }
         return { success: false, message: error.message };
     }
 }
 
 // ============================================
-// INICIAR SESIÓN
+// LOGIN
 // ============================================
 export async function iniciarSesion(email, password) {
-    if (!email || !password) {
-        return { success: false, message: '⚠️ Correo y contraseña son requeridos.' };
-    }
-    
     try {
-        const { data, error } = await supabase.auth.signInWithPassword({
-            email: email,
-            password: password
+        const { error } = await supabase.auth.signInWithPassword({
+            email,
+            password
         });
-        
+
         if (error) throw error;
-        
+
         await initAuth();
-        
+
         return {
             success: true,
-            message: `🎉 ¡Bienvenido, ${currentUser.nombre}!`
+            message: '🎉 Bienvenido'
         };
-        
+
     } catch (error) {
-        console.error('❌ Error en login:', error);
-        
-        if (error.message.includes('Invalid login credentials')) {
-            return { success: false, message: '❌ Correo o contraseña incorrectos.' };
-        }
-        return { success: false, message: error.message };
+        return {
+            success: false,
+            message: '❌ Credenciales incorrectas'
+        };
     }
 }
 
 // ============================================
-// INICIAR SESIÓN CON GOOGLE
+// GOOGLE LOGIN
 // ============================================
 export async function iniciarSesionConGoogle() {
-    const { error } = await supabase.auth.signInWithOAuth({
+    await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
             redirectTo: 'https://pretel1.github.io/AXON-LAB/'
         }
     });
-    
-    if (error) {
-        console.error('❌ Error en login con Google:', error);
-        alert('Error al iniciar sesión con Google: ' + error.message);
-    }
 }
 
 // ============================================
-// CERRAR SESIÓN
+// LOGOUT
 // ============================================
 export async function cerrarSesion() {
-    const { error } = await supabase.auth.signOut();
-    if (!error) {
-        currentUser = null;
-        setCurrentUser(null);
-        if (window.updateUIGlobal) window.updateUIGlobal();
-        window.location.hash = 'inicio';
-        console.log('✅ Sesión cerrada');
-    }
+    await supabase.auth.signOut();
 }
 
 // ============================================
-// RECUPERAR CONTRASEÑA
+// RESET PASSWORD
 // ============================================
 export async function recuperarPassword(email) {
-    if (!email) {
-        return { success: false, message: '⚠️ Ingresa tu correo electrónico.' };
-    }
-    
-    try {
-        const { error } = await supabase.auth.resetPasswordForEmail(email, {
-            redirectTo: 'https://pretel1.github.io/AXON-LAB/pages/restablecer.html'
-        });
-        
-        if (error) throw error;
-        
-        return {
-            success: true,
-            message: '📧 Se ha enviado un enlace de recuperación a tu correo.'
-        };
-        
-    } catch (error) {
+    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: 'https://pretel1.github.io/AXON-LAB/pages/restablecer.html'
+    });
+
+    if (error) {
         return { success: false, message: error.message };
     }
+
+    return {
+        success: true,
+        message: '📧 Revisa tu correo'
+    };
 }
 
 // ============================================
-// FUNCIONES AUXILIARES
+// HELPERS
 // ============================================
 export function obtenerUsuarioActual() { return currentUser; }
-export function haySesionActiva() { return currentUser !== null; }
+export function haySesionActiva() { return !!currentUser; }
 
+// ============================================
+// UI GLOBAL
+// ============================================
 export function actualizarUIGlobal() {
     const isAuth = haySesionActiva();
     const user = obtenerUsuarioActual();
-    
+
     const userNameSpan = document.getElementById('userName');
-    if (userNameSpan) {
-        userNameSpan.textContent = user?.nombre || 'Invitado';
-    }
-    
-    const registroLink = document.getElementById('registroNavLink');
-    const loginLink = document.getElementById('loginNavLink');
-    const logoutLink = document.getElementById('logoutNavLink');
-    const subirLink = document.getElementById('subirNavLink');
-    
-    if (registroLink) registroLink.style.display = isAuth ? 'none' : 'flex';
-    if (loginLink) loginLink.style.display = isAuth ? 'none' : 'flex';
-    if (logoutLink) logoutLink.style.display = isAuth ? 'flex' : 'none';
-    if (subirLink) subirLink.style.display = isAuth ? 'flex' : 'none';
+    if (userNameSpan) userNameSpan.textContent = user?.nombre || 'Invitado';
+
+    const registro = document.getElementById('registroNavLink');
+    const login = document.getElementById('loginNavLink');
+    const logout = document.getElementById('logoutNavLink');
+    const subir = document.getElementById('subirNavLink');
+
+    if (registro) registro.style.display = isAuth ? 'none' : 'flex';
+    if (login) login.style.display = isAuth ? 'none' : 'flex';
+    if (logout) logout.style.display = isAuth ? 'flex' : 'none';
+    if (subir) subir.style.display = isAuth ? 'flex' : 'none';
 }
 
-// Exportar account para compatibilidad
-export const account = supabase.auth;
-
 // ============================================
-// INICIALIZAR
+// INIT
 // ============================================
-if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', () => {
-        initAuth().then(() => actualizarUIGlobal());
-    });
-} else {
-    initAuth().then(() => actualizarUIGlobal());
-}
+initAuth();
 
-console.log('✅ Auth.js migrado a Supabase');
+console.log('✅ Auth listo PRO');
