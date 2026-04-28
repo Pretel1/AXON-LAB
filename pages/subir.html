@@ -1,416 +1,96 @@
-<!-- pages/subir.html - Subir laboratorio mejorado -->
+<!-- pages/subir.html - VERSION FINAL PRO -->
 <div class="container fade-in">
     <div class="form-card" style="max-width: 600px; margin: 0 auto;">
-        <div class="form-header" style="text-align: center; margin-bottom: 2rem;">
-            <h2>📤 Subir nuevo laboratorio</h2>
-            <p style="color: var(--text-muted);">Comparte tu laboratorio con la comunidad académica</p>
-        </div>
         
-        <!-- Indicador de usuario autenticado -->
-        <div id="userInfo" class="user-info-badge" style="display: none; background: #e8f5e9; padding: 0.75rem; border-radius: 8px; margin-bottom: 1.5rem; text-align: center;">
+        <div style="text-align:center; margin-bottom:2rem;">
+            <h2>📤 Subir laboratorio</h2>
+            <p style="color:gray;">Comparte tu laboratorio</p>
+        </div>
+
+        <div id="userInfo" style="display:none; background:#e8f5e9; padding:10px; border-radius:8px;">
             ✅ Subiendo como: <strong id="userEmailDisplay"></strong>
         </div>
-        
+
         <form id="formSubir">
-            <div class="form-group">
-                <label class="form-label required">📌 Título del laboratorio</label>
-                <input type="text" id="labNombre" class="form-input" 
-                       placeholder="Ej: Introducción a la Ciberseguridad" 
-                       maxlength="100" required>
-                <small class="form-help">Máximo 100 caracteres</small>
-            </div>
-            
-            <div class="form-group">
-                <label class="form-label required">📝 Descripción</label>
-                <textarea id="labDescripcion" class="form-textarea" rows="5" 
-                          placeholder="Describe el contenido de tu laboratorio, los temas que cubre y los requisitos..." 
-                          maxlength="2000" required></textarea>
-                <small class="form-help">Máximo 2000 caracteres</small>
-            </div>
-            
-            <div class="form-group">
-                <label class="form-label required">📂 Categoría</label>
-                <select id="labCategoria" class="form-select" required>
-                    <option value="">Seleccionar categoría</option>
-                    <option value="Programación">💻 Programación</option>
-                    <option value="Matemáticas">📐 Matemáticas</option>
-                    <option value="Física">⚡ Física</option>
-                    <option value="Química">🧪 Química</option>
-                    <option value="Biología">🧬 Biología</option>
-                    <option value="Idiomas">🌐 Idiomas</option>
-                    <option value="Seguridad">🔒 Seguridad Informática</option>
-                    <option value="Inteligencia Artificial">🧠 Inteligencia Artificial</option>
-                    <option value="Redes">🌐 Redes</option>
-                    <option value="Base de Datos">🗄️ Base de Datos</option>
-                    <option value="Diseño">🎨 Diseño</option>
-                    <option value="Otros">📚 Otros</option>
-                </select>
-            </div>
-            
-            <div class="form-group">
-                <label class="form-label required">📎 Archivo</label>
-                <div class="file-upload-area" id="fileUploadArea" style="border: 2px dashed var(--border-color); border-radius: 8px; padding: 1.5rem; text-align: center; cursor: pointer; transition: all 0.2s;">
-                    <div style="font-size: 2rem;">📄</div>
-                    <p>Arrastra un archivo o haz clic para seleccionar</p>
-                    <small class="form-help">PDF, ZIP, DOC, DOCX (Máximo 10MB)</small>
-                    <input type="file" id="labArchivo" style="display: none;" accept=".pdf,.zip,.doc,.docx" required>
-                </div>
-                <div id="selectedFileInfo" style="display: none; margin-top: 0.5rem; padding: 0.5rem; background: var(--bg-secondary); border-radius: 6px;">
-                    <span id="selectedFileName"></span>
-                    <button type="button" id="clearFileBtn" style="background: none; border: none; color: #dc3545; cursor: pointer; margin-left: 0.5rem;">🗑️</button>
-                </div>
-            </div>
-            
-            <div class="form-progress" id="formProgress" style="display: none; margin-top: 1rem;">
-                <div class="progress-bar" style="height: 4px; background: var(--color-primary); width: 0%; border-radius: 2px; transition: width 0.3s;"></div>
-                <small id="progressText" style="display: block; text-align: center; margin-top: 0.5rem;">Subiendo...</small>
-            </div>
-            
-            <button type="submit" class="btn btn-primary" id="submitBtn" style="width: 100%; margin-top: 1rem;">
-                🚀 Subir laboratorio
-            </button>
+
+            <input id="labNombre" placeholder="Título" required>
+            <textarea id="labDescripcion" placeholder="Descripción" required></textarea>
+
+            <select id="labCategoria" required>
+                <option value="">Categoría</option>
+                <option value="Programación">Programación</option>
+                <option value="Seguridad">Seguridad</option>
+                <option value="Redes">Redes</option>
+                <option value="IA">IA</option>
+            </select>
+
+            <input type="file" id="labArchivo" required>
+
+            <button type="submit" id="submitBtn">Subir</button>
+
             <div id="msgSubir"></div>
+
         </form>
-        
-        <div style="text-align: center; margin-top: 1.5rem;">
-            <a href="#" onclick="window.navigateTo('laboratorios'); return false;" class="btn-link">← Volver a laboratorios</a>
-        </div>
     </div>
 </div>
 
-<style>
-    .form-card {
-        background: var(--bg-card, white);
-        border-radius: 16px;
-        padding: 2rem;
-        box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1);
-    }
-    
-    .file-upload-area:hover {
-        border-color: var(--color-primary, #007bff);
-        background: var(--bg-hover, rgba(0,123,255,0.05));
-    }
-    
-    .form-input, .form-textarea, .form-select {
-        width: 100%;
-        padding: 0.75rem;
-        border: 1px solid var(--border-color, #e5e7eb);
-        border-radius: 8px;
-        font-size: 0.875rem;
-        transition: all 0.2s;
-    }
-    
-    .form-input:focus, .form-textarea:focus, .form-select:focus {
-        outline: none;
-        border-color: var(--color-primary, #007bff);
-        box-shadow: 0 0 0 2px rgba(0,123,255,0.1);
-    }
-    
-    .form-textarea {
-        resize: vertical;
-        min-height: 100px;
-    }
-    
-    .form-label {
-        display: block;
-        margin-bottom: 0.5rem;
-        font-weight: 500;
-        color: var(--text-primary, #1f2937);
-    }
-    
-    .form-label.required::after {
-        content: '*';
-        color: #dc3545;
-        margin-left: 0.25rem;
-    }
-    
-    .form-help {
-        display: block;
-        margin-top: 0.25rem;
-        font-size: 0.7rem;
-        color: var(--text-muted, #6c757d);
-    }
-    
-    .alert {
-        padding: 0.75rem;
-        border-radius: 8px;
-        margin-top: 1rem;
-        font-size: 0.875rem;
-    }
-    
-    .alert-success {
-        background: #d4edda;
-        color: #155724;
-        border: 1px solid #c3e6cb;
-    }
-    
-    .alert-error {
-        background: #f8d7da;
-        color: #721c24;
-        border: 1px solid #f5c6cb;
-    }
-    
-    .alert-info {
-        background: #d1ecf1;
-        color: #0c5460;
-        border: 1px solid #bee5eb;
-    }
-    
-    .btn-primary {
-        background: var(--color-primary, #007bff);
-        color: white;
-        border: none;
-        padding: 0.75rem;
-        border-radius: 8px;
-        font-size: 1rem;
-        cursor: pointer;
-        transition: background 0.2s;
-    }
-    
-    .btn-primary:hover:not(:disabled) {
-        background: var(--color-primary-dark, #0056b3);
-    }
-    
-    .btn-primary:disabled {
-        opacity: 0.6;
-        cursor: not-allowed;
-    }
-    
-    .btn-link {
-        color: var(--color-primary, #007bff);
-        text-decoration: none;
-    }
-    
-    .btn-link:hover {
-        text-decoration: underline;
-    }
-    
-    .user-info-badge {
-        background: #e8f5e9;
-        border: 1px solid #c8e6c9;
-        border-radius: 8px;
-    }
-</style>
-
 <script type="module">
-    import { uploadLab } from '../js/labs.js';
-    import { obtenerUsuarioActual, haySesionActiva } from '../js/auth.js';
-    
-    const form = document.getElementById('formSubir');
-    const msgDiv = document.getElementById('msgSubir');
-    const submitBtn = document.getElementById('submitBtn');
-    const fileInput = document.getElementById('labArchivo');
-    const fileUploadArea = document.getElementById('fileUploadArea');
-    const selectedFileInfo = document.getElementById('selectedFileInfo');
-    const selectedFileName = document.getElementById('selectedFileName');
-    const clearFileBtn = document.getElementById('clearFileBtn');
-    const formProgress = document.getElementById('formProgress');
-    const progressBar = formProgress?.querySelector('.progress-bar');
-    const progressText = document.getElementById('progressText');
-    
-    let archivoSeleccionado = null;
-    
-    // ============================================
-    // VERIFICAR SESIÓN
-    // ============================================
-    const user = obtenerUsuarioActual();
-    const isAuth = haySesionActiva();
-    
-    if (!isAuth || !user) {
-        msgDiv.innerHTML = '<div class="alert alert-error">⚠️ Debes iniciar sesión para subir laboratorios</div>';
-        form.style.display = 'none';
-        
-        setTimeout(() => {
-            if (typeof window.navigateTo === 'function') {
-                window.navigateTo('login');
-            } else {
-                window.location.hash = 'login';
-            }
-        }, 2000);
+import { uploadLab } from '../js/labs.js';
+import { initAuth } from '../js/auth.js';
+
+const form = document.getElementById('formSubir');
+const msg = document.getElementById('msgSubir');
+const btn = document.getElementById('submitBtn');
+
+let archivo = null;
+
+// ============================================
+// ESPERAR AUTH REAL (FIX IMPORTANTE)
+// ============================================
+const user = await initAuth();
+
+if (!user) {
+    msg.innerHTML = '⚠️ Debes iniciar sesión';
+    form.style.display = 'none';
+    setTimeout(()=>location.hash='login',1500);
+} else {
+    document.getElementById('userEmailDisplay').textContent = user.email;
+    document.getElementById('userInfo').style.display = 'block';
+}
+
+// ============================================
+// FILE
+// ============================================
+document.getElementById('labArchivo').addEventListener('change', e=>{
+    archivo = e.target.files[0];
+});
+
+// ============================================
+// SUBMIT
+// ============================================
+form.addEventListener('submit', async e=>{
+    e.preventDefault();
+
+    const nombre = document.getElementById('labNombre').value.trim();
+    const desc = document.getElementById('labDescripcion').value.trim();
+    const cat = document.getElementById('labCategoria').value;
+
+    if (!archivo) return msg.innerHTML='❌ Archivo requerido';
+    if (archivo.size > 10*1024*1024) return msg.innerHTML='❌ Máx 10MB';
+
+    btn.disabled = true;
+    btn.textContent = 'Subiendo...';
+
+    const res = await uploadLab(archivo, nombre, desc, cat);
+
+    if (res.success) {
+        msg.innerHTML='✅ Subido';
+        form.reset();
+        setTimeout(()=>location.hash='laboratorios',1500);
     } else {
-        console.log('✅ Usuario autenticado:', user.email);
-        const userInfoDiv = document.getElementById('userInfo');
-        const userEmailDisplay = document.getElementById('userEmailDisplay');
-        if (userInfoDiv && userEmailDisplay) {
-            userEmailDisplay.textContent = user.email;
-            userInfoDiv.style.display = 'block';
-        }
+        msg.innerHTML='❌ '+res.error;
+        btn.disabled=false;
+        btn.textContent='Subir';
     }
-    
-    // ============================================
-    // CONFIGURAR UPLOAD DE ARCHIVO (Drag & Drop)
-    // ============================================
-    if (fileUploadArea) {
-        fileUploadArea.addEventListener('click', () => {
-            fileInput.click();
-        });
-        
-        fileUploadArea.addEventListener('dragover', (e) => {
-            e.preventDefault();
-            fileUploadArea.style.borderColor = 'var(--color-primary, #007bff)';
-            fileUploadArea.style.background = 'rgba(0,123,255,0.05)';
-        });
-        
-        fileUploadArea.addEventListener('dragleave', () => {
-            fileUploadArea.style.borderColor = 'var(--border-color, #e5e7eb)';
-            fileUploadArea.style.background = 'transparent';
-        });
-        
-        fileUploadArea.addEventListener('drop', (e) => {
-            e.preventDefault();
-            fileUploadArea.style.borderColor = 'var(--border-color, #e5e7eb)';
-            fileUploadArea.style.background = 'transparent';
-            
-            const files = e.dataTransfer.files;
-            if (files.length > 0) {
-                fileInput.files = files;
-                handleFileSelect(files[0]);
-            }
-        });
-    }
-    
-    fileInput.addEventListener('change', (e) => {
-        if (e.target.files.length > 0) {
-            handleFileSelect(e.target.files[0]);
-        }
-    });
-    
-    function handleFileSelect(file) {
-        archivoSeleccionado = file;
-        
-        // Validar tamaño
-        if (file.size > 10 * 1024 * 1024) {
-            msgDiv.innerHTML = '<div class="alert alert-error">⚠️ El archivo no debe superar los 10MB</div>';
-            fileInput.value = '';
-            archivoSeleccionado = null;
-            selectedFileInfo.style.display = 'none';
-            return;
-        }
-        
-        // Validar tipo
-        const allowedExtensions = /\.(pdf|zip|doc|docx)$/i;
-        if (!allowedExtensions.test(file.name)) {
-            msgDiv.innerHTML = '<div class="alert alert-error">⚠️ Formato no permitido. Usa PDF, ZIP, DOC o DOCX</div>';
-            fileInput.value = '';
-            archivoSeleccionado = null;
-            selectedFileInfo.style.display = 'none';
-            return;
-        }
-        
-        // Mostrar archivo seleccionado
-        msgDiv.innerHTML = '';
-        selectedFileName.textContent = `📎 ${file.name} (${(file.size / 1024 / 1024).toFixed(2)} MB)`;
-        selectedFileInfo.style.display = 'block';
-    }
-    
-    if (clearFileBtn) {
-        clearFileBtn.addEventListener('click', () => {
-            fileInput.value = '';
-            archivoSeleccionado = null;
-            selectedFileInfo.style.display = 'none';
-        });
-    }
-    
-    // ============================================
-    // SIMULAR PROGRESO (Appwrite no tiene progreso nativo)
-    // ============================================
-    function simularProgreso() {
-        let progreso = 0;
-        const interval = setInterval(() => {
-            progreso += 10;
-            if (progreso <= 90) {
-                if (progressBar) progressBar.style.width = `${progreso}%`;
-                if (progressText) progressText.textContent = `Subiendo... ${progreso}%`;
-            }
-        }, 200);
-        return interval;
-    }
-    
-    // ============================================
-    // SUBIR LABORATORIO
-    // ============================================
-    form.addEventListener('submit', async (e) => {
-        e.preventDefault();
-        
-        const nombre = document.getElementById('labNombre').value.trim();
-        const descripcion = document.getElementById('labDescripcion').value.trim();
-        const categoria = document.getElementById('labCategoria').value;
-        
-        // Validaciones
-        if (!nombre) {
-            msgDiv.innerHTML = '<div class="alert alert-error">⚠️ Ingresa el título del laboratorio</div>';
-            return;
-        }
-        
-        if (!descripcion) {
-            msgDiv.innerHTML = '<div class="alert alert-error">⚠️ Ingresa una descripción</div>';
-            return;
-        }
-        
-        if (!categoria) {
-            msgDiv.innerHTML = '<div class="alert alert-error">⚠️ Selecciona una categoría</div>';
-            return;
-        }
-        
-        if (!archivoSeleccionado) {
-            msgDiv.innerHTML = '<div class="alert alert-error">⚠️ Selecciona un archivo para subir</div>';
-            return;
-        }
-        
-        // Mostrar progreso
-        if (formProgress) formProgress.style.display = 'block';
-        const progressInterval = simularProgreso();
-        
-        submitBtn.disabled = true;
-        submitBtn.textContent = '⏳ Subiendo archivo...';
-        msgDiv.innerHTML = '';
-        
-        const result = await uploadLab(archivoSeleccionado, nombre, descripcion, categoria);
-        
-        clearInterval(progressInterval);
-        
-        if (result.success) {
-            if (progressBar) progressBar.style.width = '100%';
-            if (progressText) progressText.textContent = '¡Subida completa!';
-            msgDiv.innerHTML = '<div class="alert alert-success">✅ ¡Laboratorio subido con éxito!</div>';
-            form.reset();
-            archivoSeleccionado = null;
-            selectedFileInfo.style.display = 'none';
-            
-            setTimeout(() => {
-                if (typeof window.navigateTo === 'function') {
-                    window.navigateTo('laboratorios');
-                } else {
-                    window.location.hash = 'laboratorios';
-                }
-            }, 2000);
-        } else {
-            msgDiv.innerHTML = `<div class="alert alert-error">❌ Error: ${result.error}</div>`;
-            submitBtn.disabled = false;
-            submitBtn.textContent = '🚀 Subir laboratorio';
-            if (formProgress) formProgress.style.display = 'none';
-        }
-    });
-    
-    // ============================================
-    // LIMITAR CARACTERES EN TIEMPO REAL
-    // ============================================
-    const nombreInput = document.getElementById('labNombre');
-    const descripcionTextarea = document.getElementById('labDescripcion');
-    
-    if (nombreInput) {
-        nombreInput.addEventListener('input', () => {
-            if (nombreInput.value.length > 100) {
-                nombreInput.value = nombreInput.value.substring(0, 100);
-            }
-        });
-    }
-    
-    if (descripcionTextarea) {
-        descripcionTextarea.addEventListener('input', () => {
-            if (descripcionTextarea.value.length > 2000) {
-                descripcionTextarea.value = descripcionTextarea.value.substring(0, 2000);
-            }
-        });
-    }
+});
 </script>
