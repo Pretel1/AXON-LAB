@@ -4,23 +4,25 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <title>AXON - Laboratorios Académicos</title>
+    
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="css/estilo.css">
     <link rel="stylesheet" href="css/layout.css">
     <link rel="stylesheet" href="css/componentes.css">
     <link rel="stylesheet" href="css/animaciones.css">
     <link rel="stylesheet" href="css/dark-mode.css">
+    
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🧬</text></svg>">
 </head>
 <body>
+
     <div class="app-container">
-        <!-- ============================================ -->
-        <!-- SIDEBAR / MENÚ LATERAL                        -->
-        <!-- ============================================ -->
         <aside class="sidebar" id="sidebar">
             <div class="sidebar__header">
                 <div class="sidebar__logo">AXON</div>
-                <div class="sidebar__subtitle">Laboratorios Académicos</div>
+                <div class="sidebar__subtitle">Plataforma LMS Interactiva</div>
             </div>
+            
             <nav class="sidebar__nav">
                 <a href="#inicio" class="nav-link active" data-page="inicio">
                     <span class="icon">🏠</span>
@@ -34,11 +36,14 @@
                     <span class="icon">🏷️</span>
                     <span>Categorías</span>
                 </a>
+                
                 <a href="#subir" class="nav-link" data-page="subir" id="subirNavLink" style="display: none;">
                     <span class="icon">📤</span>
-                    <span>Subir Laboratorio</span>
+                    <span>Subir Material</span>
                 </a>
+
                 <div class="sidebar__divider"></div>
+
                 <a href="#registro" class="nav-link" data-page="registro" id="registroNavLink">
                     <span class="icon">📝</span>
                     <span>Registrarse</span>
@@ -47,105 +52,87 @@
                     <span class="icon">🔑</span>
                     <span>Iniciar Sesión</span>
                 </a>
-                <a href="#" class="nav-link" id="logoutNavLink" style="display: none;">
+                <a href="#" class="nav-link" id="logoutNavLink" style="display: none; color: var(--color-error);">
                     <span class="icon">🚪</span>
                     <span>Cerrar Sesión</span>
                 </a>
             </nav>
         </aside>
-        
-        <!-- ============================================ -->
-        <!-- OVERLAY PARA MÓVIL                           -->
-        <!-- ============================================ -->
+
         <div class="sidebar-overlay" id="sidebarOverlay"></div>
-        
-        <!-- ============================================ -->
-        <!-- CONTENIDO PRINCIPAL                          -->
-        <!-- ============================================ -->
+
         <main class="main-content">
             <header class="main-header">
-                <button class="menu-toggle" id="menuToggle">☰</button>
+                <button class="menu-toggle" id="menuToggle" aria-label="Abrir menú">☰</button>
+                
                 <div class="user-info">
-                    <span>Bienvenido, <span id="userName">Invitado</span></span>
-                    <div class="user-avatar" id="userAvatar">👤</div>
+                    <div class="user-greeting">
+                        Hola, <span id="userName">Invitado</span>
+                    </div>
+                    <div class="user-avatar" id="userAvatar" title="Perfil">👤</div>
                 </div>
             </header>
-            
-            <!-- Contenedor dinámico para las páginas -->
+
             <div id="page-content" class="page-content">
                 <div class="loader" id="loader">
                     <div class="loader-spinner"></div>
-                    <p>Cargando...</p>
+                    <p style="margin-top: 1rem; color: var(--text-secondary);">Cargando AXON-LAB...</p>
                 </div>
             </div>
+
+            <footer style="text-align: center; padding: 2rem; color: var(--text-muted); font-size: 0.8rem;">
+                &copy; 2026 AXON-LAB | Ingeniería de Ciberseguridad
+            </footer>
         </main>
     </div>
 
-    <!-- ============================================ -->
-    <!-- SCRIPTS - ORDEN CORRECTO PARA SUPABASE       -->
-    <!-- ============================================ -->
-    
-    <script type="module" src="js/supabase-config.js"></script>
-    <script type="module" src="js/auth.js"></script>
-    <script type="module" src="js/labs.js"></script>
-    <script type="module" src="js/router.js"></script>
     <script type="module" src="js/app.js"></script>
-    
-    <!-- ============================================ -->
-    <!-- SCRIPT DE INICIALIZACIÓN ADICIONAL           -->
-    <!-- ============================================ -->
+
     <script type="module">
         import { cerrarSesion, actualizarUIGlobal, obtenerUsuarioActual } from './js/auth.js';
         
-        // Configurar el botón de cierre de sesión
-        const logoutLink = document.getElementById('logoutNavLink');
-        if (logoutLink) {
-            logoutLink.addEventListener('click', async (e) => {
+        // --- Manejo del Logout ---
+        const logoutBtn = document.getElementById('logoutNavLink');
+        if (logoutBtn) {
+            logoutBtn.addEventListener('click', async (e) => {
                 e.preventDefault();
-                await cerrarSesion();
-                actualizarUIGlobal();
-                window.location.hash = 'inicio';
+                if (confirm('¿Deseas cerrar tu sesión actual?')) {
+                    await cerrarSesion();
+                    // Redirigir a inicio después de logout
+                    window.location.hash = 'inicio';
+                    window.location.reload(); 
+                }
             });
         }
-        
-        // Menú toggle para móvil
+
+        // --- Manejo del Menú Mobile ---
         const menuToggle = document.getElementById('menuToggle');
         const sidebar = document.getElementById('sidebar');
         const overlay = document.getElementById('sidebarOverlay');
-        
-        if (menuToggle && sidebar && overlay) {
-            menuToggle.addEventListener('click', () => {
-                sidebar.classList.toggle('open');
-                overlay.classList.toggle('active');
+
+        const toggleMenu = () => {
+            sidebar.classList.toggle('active');
+            overlay.classList.toggle('active');
+        };
+
+        if (menuToggle) menuToggle.addEventListener('click', toggleMenu);
+        if (overlay) overlay.addEventListener('click', toggleMenu);
+
+        // --- Cerrar sidebar al hacer clic en un enlace (Móvil) ---
+        document.querySelectorAll('.nav-link').forEach(link => {
+            link.addEventListener('click', () => {
+                if (window.innerWidth <= 768) {
+                    sidebar.classList.remove('active');
+                    overlay.classList.remove('active');
+                }
             });
-            
-            overlay.addEventListener('click', () => {
-                sidebar.classList.remove('open');
-                overlay.classList.remove('active');
-            });
-        }
-        
-        // Escuchar cambios de autenticación
-        document.addEventListener('authChanged', () => {
-            console.log('🔄 Evento authChanged recibido');
-            actualizarUIGlobal();
-            
-            const user = obtenerUsuarioActual();
-            const userNameSpan = document.getElementById('userName');
-            if (userNameSpan) {
-                userNameSpan.textContent = user?.nombre || 'Invitado';
-            }
         });
-        
-        // Ocultar loader
-        window.addEventListener('load', () => {
-            const loader = document.getElementById('loader');
-            if (loader) {
-                setTimeout(() => {
-                    loader.style.display = 'none';
-                }, 500);
-            }
+
+        // --- Actualización de UI inicial ---
+        window.addEventListener('DOMContentLoaded', () => {
+            actualizarUIGlobal();
         });
     </script>
+
 </body>
 </html>
