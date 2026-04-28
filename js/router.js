@@ -1,10 +1,8 @@
-// js/router.js - VERSION FINAL PRO
-
+// js/router.js - VERSION FINAL PRO + FIX LOADER
 import { haySesionActiva } from './auth.js';
+// IMPORTANTE: Importar los controles del loader desde app.js
+import { showLoader, hideLoader } from './app.js';
 
-// ============================================
-// RUTAS
-// ============================================
 const routes = {
     inicio: 'pages/inicio.html',
     laboratorios: 'pages/laboratorios.html',
@@ -17,169 +15,108 @@ const routes = {
     restablecer: 'pages/restablecer.html'
 };
 
-// Páginas protegidas
 const protectedPages = ['subir'];
-
-// Páginas solo para no autenticados
 const publicOnlyPages = ['login', 'registro'];
 
-let currentPage = 'inicio';
-
-// ============================================
-// INICIAR ROUTER
-// ============================================
 export function initRouter() {
     window.addEventListener('hashchange', handleRoute);
-
-    document.querySelectorAll('.nav-link[data-page]').forEach(link => {
-        link.addEventListener('click', (e) => {
-            e.preventDefault();
-            navigateTo(link.dataset.page);
-        });
-    });
-
     handleRoute();
 }
 
-// ============================================
-// NAVEGAR
-// ============================================
 export function navigateTo(page, params = {}) {
     let query = '';
-
     if (Object.keys(params).length > 0) {
         query = '?' + new URLSearchParams(params).toString();
     }
-
     window.location.hash = page + query;
 }
 
-// ============================================
-// OBTENER PARÁMETROS
-// ============================================
-export function getParams() {
-    const queryString = window.location.hash.split('?')[1];
-    return new URLSearchParams(queryString);
-}
-
-// ============================================
-// MANEJAR RUTA
-// ============================================
 async function handleRoute() {
-    let fullHash = window.location.hash.slice(1) || 'inicio';
-    let [page] = fullHash.split('?');
+    // 1. Iniciar el loader visual inmediatamente
+    showLoader();
 
-    const isAuth = haySesionActiva();
+    try {
+        let fullHash = window.location.hash.slice(1) || 'inicio';
+        let [page] = fullHash.split('?');
 
-    // 🔒 Protección
-    if (protectedPages.includes(page) && !isAuth) {
-        window.location.hash = 'login';
-        return;
+        const isAuth = haySesionActiva();
+
+        // 🔒 Protección de Rutas
+        if (protectedPages.includes(page) && !isAuth) {
+            window.location.hash = 'login';
+            return;
+        }
+
+        if (publicOnlyPages.includes(page) && isAuth) {
+            window.location.hash = 'inicio';
+            return;
+        }
+
+        updateActiveNavLink(page);
+
+        // 2. Cargar el contenido HTML
+        await loadPage(page);
+
+    } catch (error) {
+        console.error('❌ Error en el routing:', error);
+    } finally {
+        // 3. SEÑAL CRÍTICA: Apagar el loader pase lo que pase
+        // Usamos un pequeño delay para que la transición neón se vea fluida
+        setTimeout(hideLoader, 600);
     }
-
-    // 👤 Usuario ya logueado
-    if (publicOnlyPages.includes(page) && isAuth) {
-        window.location.hash = 'inicio';
-        return;
-    }
-
-    currentPage = page;
-
-    updateActiveNavLink(page);
-
-    if (window.actualizarUIGlobal) {
-        window.actualizarUIGlobal();
-    }
-
-    await loadPage(page);
 }
 
-// ============================================
-// NAV ACTIVO
-// ============================================
 function updateActiveNavLink(page) {
     document.querySelectorAll('.nav-link').forEach(link => {
-        link.classList.remove('active');
-        if (link.dataset.page === page) {
-            link.classList.add('active');
-        }
+        link.classList.toggle('active', link.dataset.page === page);
     });
 }
 
-// ============================================
-// CARGAR PÁGINA
-// ============================================
 export async function loadPage(page) {
     const contentDiv = document.getElementById('page-content');
     if (!contentDiv) return;
 
-    contentDiv.innerHTML = `<p>Cargando...</p>`;
-
     const route = routes[page];
 
     if (!route) {
-        contentDiv.innerHTML = `<h2>❌ Página no encontrada</h2>`;
+        contentDiv.innerHTML = `<div class="container"><h2>❌ 404 - Página no encontrada</h2></div>`;
         return;
     }
 
     try {
         const res = await fetch(route);
-        if (!res.ok) throw new Error('Error cargando');
+        if (!res.ok) throw new Error(`Fallo al cargar: ${res.status}`);
 
         const html = await res.text();
         contentDiv.innerHTML = html;
 
+        // Ejecutar lógica específica de la página (DB, Filtros, etc)
         await executePageScripts(page);
 
     } catch (error) {
-        console.error(error);
-        contentDiv.innerHTML = `<h2>⚠️ Error al cargar la página</h2>`;
+        console.error('Error al inyectar HTML:', error);
+        contentDiv.innerHTML = `<div class="container"><h2>⚠️ Error al cargar el módulo</h2></div>`;
     }
 }
 
-// ============================================
-// SCRIPTS POR PÁGINA
-// ============================================
 async function executePageScripts(page) {
     try {
+        // Importación dinámica de labs solo cuando sea necesario
         const labs = await import('./labs.js');
 
         switch (page) {
-            case 'inicio':
-                return labs.initHomePage();
-
-            case 'laboratorios':
-                return labs.initLabsPage();
-
-            case 'categorias':
-                return labs.initCategoriesPage();
-
-            case 'subir':
-                return labs.initUploadPage();
-
-            case 'detalle':
-                return labs.initDetailPage();
-
-            default:
-                console.log('📄 Página cargada:', page);
+            case 'inicio': return labs.initHomePage();
+            case 'laboratorios': return labs.initLabsPage();
+            case 'subir': return labs.initUploadPage();
+            case 'detalle': return labs.initDetailPage();
+            default: console.log('📄 Vista:', page);
         }
-
     } catch (error) {
-        console.error('❌ Error scripts:', error);
+        console.warn('Nota: Esta página no requiere inicialización de datos de Labs.');
     }
 }
 
-// ============================================
-// RECARGAR
-// ============================================
-export function reloadCurrentPage() {
-    handleRoute();
-}
-
-// ============================================
-// GLOBAL
-// ============================================
+// Globales para acceso desde HTML inline si es necesario
 window.navigateTo = navigateTo;
-window.reloadCurrentPage = reloadCurrentPage;
 
-console.log('✅ Router listo');
+console.log('✅ Router listo y sincronizado');
