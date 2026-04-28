@@ -1,35 +1,32 @@
-<!-- pages/subir.html - VERSION FINAL PRO -->
 <div class="container fade-in">
     <div class="form-card" style="max-width: 600px; margin: 0 auto;">
-        
         <div style="text-align:center; margin-bottom:2rem;">
             <h2>📤 Subir laboratorio</h2>
-            <p style="color:gray;">Comparte tu laboratorio</p>
         </div>
-
         <div id="userInfo" style="display:none; background:#e8f5e9; padding:10px; border-radius:8px;">
             ✅ Subiendo como: <strong id="userEmailDisplay"></strong>
         </div>
-
         <form id="formSubir">
-
-            <input id="labNombre" placeholder="Título" required>
-            <textarea id="labDescripcion" placeholder="Descripción" required></textarea>
-
-            <select id="labCategoria" required>
+            <input id="labNombre" class="form-input" placeholder="Título" required>
+            <textarea id="labDescripcion" class="form-textarea" placeholder="Descripción" required></textarea>
+            <select id="labCategoria" class="form-select" required>
                 <option value="">Categoría</option>
                 <option value="Programación">Programación</option>
                 <option value="Seguridad">Seguridad</option>
                 <option value="Redes">Redes</option>
                 <option value="IA">IA</option>
             </select>
+            
+            <div class="form-group" style="margin-top: 15px;">
+                <label><input type="radio" name="tipoRecurso" value="archivo" checked> Archivo Local</label>
+                <label><input type="radio" name="tipoRecurso" value="enlace_externo"> Enlace OneDrive/Externo</label>
+            </div>
 
-            <input type="file" id="labArchivo" required>
+            <input type="file" id="labArchivo" class="form-input">
+            <input type="url" id="labEnlace" class="form-input" placeholder="https://1drv.ms/..." style="display: none;">
 
-            <button type="submit" id="submitBtn">Subir</button>
-
-            <div id="msgSubir"></div>
-
+            <button type="submit" id="submitBtn" class="btn btn-primary" style="width: 100%; margin-top: 15px;">Subir</button>
+            <div id="msgSubir" class="alert"></div>
         </form>
     </div>
 </div>
@@ -41,56 +38,55 @@ import { initAuth } from '../js/auth.js';
 const form = document.getElementById('formSubir');
 const msg = document.getElementById('msgSubir');
 const btn = document.getElementById('submitBtn');
+const radios = document.getElementsByName('tipoRecurso');
+const inputArchivo = document.getElementById('labArchivo');
+const inputEnlace = document.getElementById('labEnlace');
 
+let tipoSeleccionado = 'archivo';
 let archivo = null;
 
-// ============================================
-// ESPERAR AUTH REAL (FIX IMPORTANTE)
-// ============================================
 const user = await initAuth();
-
-if (!user) {
-    msg.innerHTML = '⚠️ Debes iniciar sesión';
+if (!user || user.rol === 'estudiante') {
+    msg.innerHTML = '⚠️ Debes iniciar sesión como Profesor/Admin';
     form.style.display = 'none';
-    setTimeout(()=>location.hash='login',1500);
 } else {
     document.getElementById('userEmailDisplay').textContent = user.email;
     document.getElementById('userInfo').style.display = 'block';
 }
 
-// ============================================
-// FILE
-// ============================================
-document.getElementById('labArchivo').addEventListener('change', e=>{
-    archivo = e.target.files[0];
-});
+radios.forEach(r => r.addEventListener('change', e => {
+    tipoSeleccionado = e.target.value;
+    inputArchivo.style.display = tipoSeleccionado === 'archivo' ? 'block' : 'none';
+    inputEnlace.style.display = tipoSeleccionado === 'enlace_externo' ? 'block' : 'none';
+    inputArchivo.required = tipoSeleccionado === 'archivo';
+    inputEnlace.required = tipoSeleccionado === 'enlace_externo';
+}));
 
-// ============================================
-// SUBMIT
-// ============================================
-form.addEventListener('submit', async e=>{
+inputArchivo.addEventListener('change', e => archivo = e.target.files[0]);
+
+form.addEventListener('submit', async e => {
     e.preventDefault();
-
     const nombre = document.getElementById('labNombre').value.trim();
     const desc = document.getElementById('labDescripcion').value.trim();
     const cat = document.getElementById('labCategoria').value;
-
-    if (!archivo) return msg.innerHTML='❌ Archivo requerido';
-    if (archivo.size > 10*1024*1024) return msg.innerHTML='❌ Máx 10MB';
+    const enlace = inputEnlace.value.trim();
 
     btn.disabled = true;
     btn.textContent = 'Subiendo...';
 
-    const res = await uploadLab(archivo, nombre, desc, cat);
+    const payload = tipoSeleccionado === 'archivo' ? archivo : enlace;
+    const res = await uploadLab(tipoSeleccionado, payload, nombre, desc, cat);
 
     if (res.success) {
-        msg.innerHTML='✅ Subido';
+        msg.className = 'alert alert-success';
+        msg.innerHTML = '✅ Recurso Subido';
         form.reset();
-        setTimeout(()=>location.hash='laboratorios',1500);
+        setTimeout(() => location.hash = 'laboratorios', 1500);
     } else {
-        msg.innerHTML='❌ '+res.error;
-        btn.disabled=false;
-        btn.textContent='Subir';
+        msg.className = 'alert alert-error';
+        msg.innerHTML = '❌ ' + res.error;
+        btn.disabled = false;
+        btn.textContent = 'Subir';
     }
 });
 </script>
