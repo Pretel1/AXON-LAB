@@ -1,502 +1,66 @@
-<!-- ============================================ -->
-<!-- PÁGINA: DETALLE DEL LABORATORIO (APPWRITE)   -->
-<!-- Compatible con router.js y auth.js           -->
-<!-- ============================================ -->
-
 <div class="page fade-in" id="detallePage">
     <div class="container" style="max-width: 1000px; margin: 0 auto; padding: 1rem;">
-        <div style="margin-bottom: 1.5rem;">
-            <button id="backBtn" class="btn btn-outline">
-                ← Volver a laboratorios
-            </button>
-        </div>
-        
-        <div id="detalleContent">
-            <div style="text-align: center; padding: 3rem;">
-                <div class="loader-spinner" style="margin: 0 auto;"></div>
-                <p style="margin-top: 1rem; color: var(--text-muted);">Cargando laboratorio...</p>
-            </div>
-        </div>
+        <button id="backBtn" class="btn btn-outline">← Volver</button>
+        <div id="detalleContent" style="margin-top: 2rem;"></div>
     </div>
 </div>
 
-<style>
-    .detail-card {
-        background: var(--bg-card, white);
-        border-radius: 16px;
-        padding: 2rem;
-        border: 1px solid var(--border-color, #e5e7eb);
-        box-shadow: 0 4px 12px rgba(0,0,0,0.05);
-    }
-    
-    .detail-category {
-        display: inline-block;
-        font-size: 0.875rem;
-        background: var(--color-primary-light, #e3f2fd);
-        color: var(--color-primary, #007bff);
-        padding: 0.5rem 1rem;
-        border-radius: 8px;
-        margin-bottom: 1rem;
-    }
-    
-    .detail-stats {
-        display: flex;
-        gap: 1rem;
-        color: var(--text-muted, #6c757d);
-        font-size: 0.875rem;
-    }
-    
-    .detail-title {
-        font-size: 2rem;
-        margin: 1rem 0;
-        color: var(--text-primary, #1f2937);
-    }
-    
-    .detail-author {
-        display: flex;
-        align-items: center;
-        gap: 1rem;
-        margin: 1.5rem 0;
-        padding-bottom: 1.5rem;
-        border-bottom: 1px solid var(--border-color, #e5e7eb);
-    }
-    
-    .author-avatar {
-        width: 50px;
-        height: 50px;
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        border-radius: 50%;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-size: 1.5rem;
-        color: white;
-    }
-    
-    .detail-description {
-        margin: 1.5rem 0;
-    }
-    
-    .detail-description h3 {
-        margin-bottom: 0.75rem;
-        color: var(--text-primary, #1f2937);
-    }
-    
-    .detail-description p {
-        color: var(--text-muted, #6c757d);
-        line-height: 1.6;
-    }
-    
-    .file-info {
-        margin: 1.5rem 0;
-        padding: 1rem;
-        background: rgba(0,123,255,0.05);
-        border-radius: 12px;
-    }
-    
-    .action-buttons {
-        display: flex;
-        gap: 1rem;
-        flex-wrap: wrap;
-        justify-content: center;
-        margin-top: 2rem;
-    }
-    
-    .btn-outline {
-        background: transparent;
-        border: 1px solid var(--border-color, #e5e7eb);
-        padding: 0.5rem 1rem;
-        border-radius: 8px;
-        cursor: pointer;
-        transition: all 0.2s;
-    }
-    
-    .btn-outline:hover {
-        background: var(--bg-hover, #f8f9fa);
-    }
-    
-    .btn-primary {
-        background: var(--color-primary, #007bff);
-        color: white;
-        border: none;
-        padding: 0.75rem 1.5rem;
-        border-radius: 8px;
-        cursor: pointer;
-        transition: background 0.2s;
-    }
-    
-    .btn-primary:hover:not(:disabled) {
-        background: var(--color-primary-dark, #0056b3);
-    }
-    
-    .btn-primary:disabled {
-        opacity: 0.6;
-        cursor: not-allowed;
-    }
-    
-    .btn-error {
-        background: #dc3545;
-        color: white;
-        border: none;
-        padding: 0.75rem 1.5rem;
-        border-radius: 8px;
-        cursor: pointer;
-        transition: background 0.2s;
-    }
-    
-    .btn-error:hover:not(:disabled) {
-        background: #c82333;
-    }
-    
-    .alert {
-        padding: 0.75rem;
-        border-radius: 8px;
-        margin: 1rem 0;
-        font-size: 0.875rem;
-    }
-    
-    .alert-success {
-        background: #d4edda;
-        color: #155724;
-        border: 1px solid #c3e6cb;
-    }
-    
-    .alert-error {
-        background: #f8d7da;
-        color: #721c24;
-        border: 1px solid #f5c6cb;
-    }
-    
-    .loader-spinner {
-        width: 40px;
-        height: 40px;
-        border: 3px solid var(--border-color, #e5e7eb);
-        border-top-color: var(--color-primary, #007bff);
-        border-radius: 50%;
-        animation: spin 0.8s linear infinite;
-        margin: 0 auto;
-    }
-    
-    @keyframes spin {
-        to { transform: rotate(360deg); }
-    }
-</style>
-
 <script type="module">
-    import { getLabById, getDownloadUrl, incrementDownloads, deleteLab } from '../js/labs.js';
-    import { haySesionActiva, obtenerUsuarioActual } from '../js/auth.js';
+import { getLabById, incrementDownloads, deleteLab } from '../js/labs.js';
+import { obtenerUsuarioActual } from '../js/auth.js';
+
+async function cargarDetalle() {
+    const params = new URLSearchParams(window.location.hash.split('?')[1]);
+    const id = params.get('id');
+    const container = document.getElementById('detalleContent');
+    const user = obtenerUsuarioActual();
+
+    const result = await getLabById(id);
+    if (!result.success) {
+        container.innerHTML = `<h3>❌ Error: ${result.error}</h3>`;
+        return;
+    }
+
+    const lab = result.lab;
+    const isOwnerOrAdmin = user && (user.id === lab.userId || user.rol === 'admin');
     
-    // ============================================
-    // OBTENER ID DE LABORATORIO DE LA URL
-    // ============================================
-    function obtenerIdLaboratorio() {
-        // Método 1: Desde hash (#detalle?id=xxx)
-        const hash = window.location.hash;
-        const hashMatch = hash.match(/[?&]id=([^&]+)/);
-        if (hashMatch) {
-            return decodeURIComponent(hashMatch[1]);
+    let btnHtml = '';
+    if (lab.tipo === 'archivo') {
+        btnHtml = `<button id="downloadBtn" class="btn btn-primary">📥 Descargar Archivo</button>`;
+    } else {
+        btnHtml = `<button id="linkBtn" class="btn btn-secondary">🌐 Abrir Enlace OneDrive</button>`;
+    }
+
+    container.innerHTML = `
+        <div class="card card-body">
+            <span class="lab-card-category">📁 ${lab.category} | Tipo: ${lab.tipo}</span>
+            <h1 style="margin: 1rem 0;">${lab.title}</h1>
+            <p><strong>Autor:</strong> ${lab.userName}</p>
+            <p style="margin: 1rem 0;">${lab.description}</p>
+            <div style="display: flex; gap: 1rem;">
+                ${btnHtml}
+                ${isOwnerOrAdmin ? `<button id="deleteBtn" class="btn btn-error">🗑️ Eliminar</button>` : ''}
+            </div>
+        </div>
+    `;
+
+    document.getElementById('downloadBtn')?.addEventListener('click', async () => {
+        await incrementDownloads(lab.id, lab.downloads);
+        window.open(lab.fileUrl, '_blank');
+    });
+
+    document.getElementById('linkBtn')?.addEventListener('click', async () => {
+        await incrementDownloads(lab.id, lab.downloads);
+        window.open(lab.fileUrl, '_blank');
+    });
+
+    document.getElementById('deleteBtn')?.addEventListener('click', async () => {
+        if(confirm('¿Eliminar recurso?')) {
+            await deleteLab(lab.id, lab.fileUrl, lab.userId, lab.tipo);
+            window.location.hash = 'laboratorios';
         }
-        
-        // Método 2: Desde parámetros de navegación (router)
-        const navParams = sessionStorage.getItem('navigationParams');
-        if (navParams) {
-            try {
-                const params = JSON.parse(navParams);
-                if (params.id) {
-                    // Limpiar para no reusar
-                    sessionStorage.removeItem('navigationParams');
-                    return params.id;
-                }
-            } catch (e) {}
-        }
-        
-        // Método 3: Desde search params
-        const urlParams = new URLSearchParams(window.location.search);
-        return urlParams.get('id');
-    }
-    
-    // ============================================
-    // ESCAPE HTML (SEGURIDAD)
-    // ============================================
-    function escapeHtml(text) {
-        if (!text) return '';
-        const div = document.createElement('div');
-        div.textContent = text;
-        return div.innerHTML;
-    }
-    
-    // ============================================
-    // FORMATEAR FECHA
-    // ============================================
-    function formatearFecha(fecha) {
-        if (!fecha) return 'Fecha no disponible';
-        try {
-            return new Date(fecha).toLocaleDateString('es-PE', {
-                year: 'numeric',
-                month: 'long',
-                day: 'numeric'
-            });
-        } catch (e) {
-            return fecha;
-        }
-    }
-    
-    // ============================================
-    // FORMATEAR TAMAÑO DE ARCHIVO
-    // ============================================
-    function formatearTamaño(bytes) {
-        if (!bytes) return 'Desconocido';
-        if (bytes < 1024) return `${bytes} B`;
-        if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(2)} KB`;
-        return `${(bytes / (1024 * 1024)).toFixed(2)} MB`;
-    }
-    
-    // ============================================
-    // MOSTRAR MENSAJE
-    // ============================================
-    function mostrarMensaje(containerId, mensaje, tipo) {
-        const container = document.getElementById(containerId);
-        if (!container) return;
-        
-        let msgDiv = document.getElementById('mensajeDetalle');
-        if (!msgDiv) {
-            msgDiv = document.createElement('div');
-            msgDiv.id = 'mensajeDetalle';
-            container.insertBefore(msgDiv, container.firstChild);
-        }
-        
-        msgDiv.textContent = mensaje;
-        msgDiv.className = `alert alert-${tipo}`;
-        msgDiv.style.display = 'block';
-        
-        setTimeout(() => {
-            if (msgDiv) msgDiv.style.display = 'none';
-        }, 4000);
-    }
-    
-    // ============================================
-    // CARGAR DETALLE DEL LABORATORIO
-    // ============================================
-    async function cargarDetalle() {
-        const id = obtenerIdLaboratorio();
-        const container = document.getElementById('detalleContent');
-        
-        if (!id) {
-            container.innerHTML = `
-                <div style="text-align: center; padding: 3rem;">
-                    <div style="font-size: 4rem;">❌</div>
-                    <h2 style="margin-top: 1rem;">Laboratorio no encontrado</h2>
-                    <p style="color: var(--text-muted); margin-top: 1rem;">
-                        No se especificó un ID de laboratorio válido.
-                    </p>
-                    <button onclick="window.location.hash='laboratorios'" class="btn btn-primary" style="margin-top: 1.5rem;">
-                        📚 Ver todos los laboratorios
-                    </button>
-                </div>
-            `;
-            return;
-        }
-        
-        try {
-            // Obtener laboratorio desde Appwrite usando getLabById
-            const result = await getLabById(id);
-            
-            if (!result.success || !result.lab) {
-                container.innerHTML = `
-                    <div style="text-align: center; padding: 3rem;">
-                        <div style="font-size: 4rem;">🔍</div>
-                        <h2 style="margin-top: 1rem;">Laboratorio no encontrado</h2>
-                        <p style="color: var(--text-muted); margin-top: 1rem;">
-                            El laboratorio que buscas no existe o ha sido eliminado.
-                        </p>
-                        <button onclick="window.location.hash='laboratorios'" class="btn btn-primary" style="margin-top: 1.5rem;">
-                            📚 Ver todos los laboratorios
-                        </button>
-                    </div>
-                `;
-                return;
-            }
-            
-            const lab = result.lab;
-            const isAuthenticated = haySesionActiva();
-            const currentUser = obtenerUsuarioActual();
-            const isOwner = currentUser && (currentUser.id === lab.userId || currentUser.email === lab.userEmail);
-            
-            // Renderizar HTML
-            container.innerHTML = `
-                <div class="detail-card">
-                    <!-- Cabecera -->
-                    <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem;">
-                        <span class="detail-category">📁 ${escapeHtml(lab.category || 'Sin categoría')}</span>
-                        <div class="detail-stats">
-                            <span>⬇️ <span id="downloadsCount">${lab.downloads || 0}</span> descargas</span>
-                            <span>📅 ${formatearFecha(lab.createdAt)}</span>
-                        </div>
-                    </div>
-                    
-                    <!-- Título -->
-                    <h1 class="detail-title">${escapeHtml(lab.title)}</h1>
-                    
-                    <!-- Autor -->
-                    <div class="detail-author">
-                        <div class="author-avatar">👤</div>
-                        <div>
-                            <div style="font-weight: 600; color: var(--text-primary);">${escapeHtml(lab.userName || lab.userEmail)}</div>
-                            <div style="color: var(--text-muted); font-size: 0.75rem;">Autor del laboratorio</div>
-                        </div>
-                    </div>
-                    
-                    <!-- Descripción -->
-                    <div class="detail-description">
-                        <h3>📝 Descripción</h3>
-                        <p>${escapeHtml(lab.description || 'Sin descripción disponible.')}</p>
-                    </div>
-                    
-                    <!-- Información del archivo -->
-                    <div class="file-info">
-                        <h3 style="margin-bottom: 0.75rem;">📄 Información del archivo</h3>
-                        <p style="margin: 0; color: var(--text-muted);">
-                            <strong>Nombre:</strong> ${escapeHtml(lab.fileName || 'No disponible')}<br>
-                            <strong>Tamaño:</strong> ${formatearTamaño(lab.fileSize)}<br>
-                            <strong>Tipo:</strong> ${escapeHtml(lab.fileType || 'Desconocido')}
-                        </p>
-                    </div>
-                    
-                    <!-- Botones de acción -->
-                    <div class="action-buttons">
-                        <button id="descargarBtn" class="btn btn-primary" data-fileid="${lab.fileId}" data-docid="${lab.$id}" data-downloads="${lab.downloads || 0}">
-                            📥 Descargar Laboratorio
-                        </button>
-                        
-                        ${isOwner ? `
-                            <button id="eliminarBtn" class="btn btn-error" data-docid="${lab.$id}" data-fileid="${lab.fileId}" data-userid="${lab.userId}">
-                                🗑️ Eliminar Laboratorio
-                            </button>
-                        ` : ''}
-                    </div>
-                    
-                    ${!isAuthenticated ? `
-                        <p style="text-align: center; margin-top: 1.5rem; color: var(--text-muted); font-size: 0.75rem;">
-                            🔐 <a href="#login" style="color: var(--color-primary);">Inicia sesión</a> para más funcionalidades
-                        </p>
-                    ` : ''}
-                </div>
-            `;
-            
-            // ============================================
-            // EVENTO: DESCARGAR
-            // ============================================
-            const descargarBtn = document.getElementById('descargarBtn');
-            if (descargarBtn && lab.fileId) {
-                descargarBtn.addEventListener('click', async () => {
-                    const btn = descargarBtn;
-                    const fileId = btn.dataset.fileid;
-                    const docId = btn.dataset.docid;
-                    const currentDownloads = parseInt(btn.dataset.downloads);
-                    
-                    btn.disabled = true;
-                    btn.innerHTML = '⏳ Preparando descarga...';
-                    
-                    try {
-                        const url = await getDownloadUrl(fileId);
-                        
-                        if (url) {
-                            // Abrir en nueva pestaña
-                            window.open(url, '_blank');
-                            
-                            // Incrementar contador
-                            await incrementDownloads(docId, currentDownloads);
-                            
-                            // Actualizar UI
-                            const downloadsSpan = document.getElementById('downloadsCount');
-                            if (downloadsSpan) {
-                                const newCount = currentDownloads + 1;
-                                downloadsSpan.textContent = newCount;
-                                btn.dataset.downloads = newCount;
-                            }
-                            
-                            mostrarMensaje('detalleContent', '✅ Descarga iniciada correctamente', 'success');
-                        } else {
-                            mostrarMensaje('detalleContent', '❌ Error al obtener el archivo', 'error');
-                        }
-                        
-                    } catch (error) {
-                        console.error('Error en descarga:', error);
-                        mostrarMensaje('detalleContent', '❌ Error al descargar el archivo', 'error');
-                    } finally {
-                        btn.disabled = false;
-                        btn.innerHTML = '📥 Descargar Laboratorio';
-                    }
-                });
-            }
-            
-            // ============================================
-            // EVENTO: ELIMINAR
-            // ============================================
-            const eliminarBtn = document.getElementById('eliminarBtn');
-            if (eliminarBtn) {
-                eliminarBtn.addEventListener('click', async () => {
-                    const confirmar = confirm('⚠️ ¿Estás seguro de que quieres eliminar este laboratorio? Esta acción no se puede deshacer.');
-                    if (!confirmar) return;
-                    
-                    const btn = eliminarBtn;
-                    const docId = btn.dataset.docid;
-                    const fileId = btn.dataset.fileid;
-                    const userId = btn.dataset.userid;
-                    
-                    btn.disabled = true;
-                    btn.innerHTML = '⏳ Eliminando...';
-                    
-                    const result = await deleteLab(docId, fileId, userId);
-                    
-                    if (result.success) {
-                        mostrarMensaje('detalleContent', '✅ Laboratorio eliminado correctamente', 'success');
-                        setTimeout(() => {
-                            if (typeof window.navigateTo === 'function') {
-                                window.navigateTo('laboratorios');
-                            } else {
-                                window.location.hash = 'laboratorios';
-                            }
-                        }, 1500);
-                    } else {
-                        mostrarMensaje('detalleContent', `❌ Error: ${result.error}`, 'error');
-                        btn.disabled = false;
-                        btn.innerHTML = '🗑️ Eliminar Laboratorio';
-                    }
-                });
-            }
-            
-        } catch (error) {
-            console.error('Error al cargar detalle:', error);
-            container.innerHTML = `
-                <div style="text-align: center; padding: 3rem;">
-                    <div style="font-size: 4rem;">⚠️</div>
-                    <h2 style="margin-top: 1rem;">Error al cargar</h2>
-                    <p style="color: var(--text-muted); margin-top: 1rem;">${error.message}</p>
-                    <button onclick="window.location.hash='laboratorios'" class="btn btn-primary" style="margin-top: 1.5rem;">
-                        📚 Volver a laboratorios
-                    </button>
-                </div>
-            `;
-        }
-    }
-    
-    // ============================================
-    // BOTÓN VOLVER
-    // ============================================
-    const backBtn = document.getElementById('backBtn');
-    if (backBtn) {
-        backBtn.addEventListener('click', () => {
-            if (typeof window.navigateTo === 'function') {
-                window.navigateTo('laboratorios');
-            } else {
-                window.location.hash = 'laboratorios';
-            }
-        });
-    }
-    
-    // ============================================
-    // INICIALIZAR
-    // ============================================
-    cargarDetalle();
+    });
+}
+cargarDetalle();
+document.getElementById('backBtn').addEventListener('click', () => window.location.hash = 'laboratorios');
 </script>
