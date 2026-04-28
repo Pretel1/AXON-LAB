@@ -1,168 +1,160 @@
-// js/app.js - VERSIÓN SIMPLIFICADA (solo inicialización y UI)
-// El enrutamiento ahora está en router.js
-
-import { initAuth, haySesionActiva, obtenerUsuarioActual, cerrarSesion, actualizarUIGlobal } from './auth.js';
-import { initRouter } from './router.js';
-
-// ============================================
-// ACTUALIZAR UI SEGÚN AUTENTICACIÓN
-// ============================================
-function actualizarUI() {
-    const isAuth = haySesionActiva();
-    const user = obtenerUsuarioActual();
-    
-    // Actualizar nombre del usuario en el header
-    const userNameSpan = document.getElementById('userName');
-    if (userNameSpan) {
-        let nombre = user?.nombre || 'Invitado';
-        if (user && !user.emailVerificado) {
-            nombre += ' (⚠️ verificar email)';
-        }
-        userNameSpan.textContent = nombre;
-    }
-    
-    // Actualizar avatar
-    const userAvatar = document.getElementById('userAvatar');
-    if (userAvatar) {
-        userAvatar.textContent = user ? '👤' : '👤';
-    }
-    
-    // Actualizar enlaces del menú
-    const registroLink = document.getElementById('registroNavLink');
-    const loginLink = document.getElementById('loginNavLink');
-    const logoutLink = document.getElementById('logoutNavLink');
-    const subirLink = document.getElementById('subirNavLink');
-    
-    if (registroLink) registroLink.style.display = isAuth ? 'none' : 'flex';
-    if (loginLink) loginLink.style.display = isAuth ? 'none' : 'flex';
-    if (logoutLink) logoutLink.style.display = isAuth ? 'flex' : 'none';
-    if (subirLink) subirLink.style.display = isAuth ? 'flex' : 'none';
-    
-    console.log('🎨 UI actualizada - Autenticado:', isAuth);
-}
+/**
+ * AXON-LAB - Main Application Controller
+ * Gestión de SPA, Eventos Globales y Autenticación
+ */
+import { 
+    registrarUsuario, 
+    iniciarSesion, 
+    cerrarSesion, 
+    actualizarUIGlobal, 
+    obtenerUsuarioActual 
+} from './auth.js';
+import { navigateTo } from './router.js';
 
 // ============================================
-// ESCUCHAR EVENTOS DE AUTENTICACIÓN
+// 1. INICIALIZACIÓN DE LA APP
 // ============================================
-function setupAuthListener() {
-    document.addEventListener('authChanged', () => {
-        console.log('🔔 Evento authChanged recibido');
-        actualizarUI();
-    });
+document.addEventListener('DOMContentLoaded', async () => {
+    console.log('🚀 Iniciando AXON-LAB...');
     
-    document.addEventListener('pageLoaded', (event) => {
-        console.log(`📄 Página cargada: ${event.detail?.page}`);
-    });
-}
+    // Cargar la página inicial basada en el hash actual
+    const initialPage = window.location.hash.replace('#', '') || 'inicio';
+    navigateTo(initialPage);
+
+    // Actualizar la interfaz con el estado de sesión actual
+    actualizarUIGlobal();
+    
+    // Configurar observadores globales
+    setupGlobalEventListeners();
+});
 
 // ============================================
-// CONFIGURAR CIERRE DE SESIÓN
+// 2. MANEJO GLOBAL DE FORMULARIOS (Delegación)
 // ============================================
-function setupLogout() {
-    const logoutLink = document.getElementById('logoutNavLink');
-    if (logoutLink) {
-        // Remover event listeners anteriores para evitar duplicados
-        const newLogoutLink = logoutLink.cloneNode(true);
-        logoutLink.parentNode.replaceChild(newLogoutLink, logoutLink);
+/**
+ * Escucha todos los 'submit' del documento. 
+ * Esto permite capturar formularios inyectados dinámicamente por el router.
+ */
+document.addEventListener('submit', async (e) => {
+    const target = e.target;
+
+    // --- LÓGICA DE REGISTRO ---
+    if (target.id === 'registroForm') {
+        e.preventDefault();
+        const btn = target.querySelector('button[type="submit"]');
+        const msg = document.getElementById('regMessage');
+
+        btn.disabled = true;
+        btn.innerHTML = '⌛ Procesando...';
         
-        newLogoutLink.addEventListener('click', async (e) => {
+        const nombre = document.getElementById('regNombre').value;
+        const email = document.getElementById('regEmail').value;
+        const pass = document.getElementById('regPass').value;
+
+        const res = await registrarUsuario(nombre, email, pass);
+        
+        if (res.success) {
+            msg.className = 'alert alert-success';
+            msg.innerHTML = `✅ ${res.message}`;
+            msg.style.display = 'block';
+            target.reset();
+            // Redirigir al login después de 3 segundos
+            setTimeout(() => window.location.hash = 'login', 3000);
+        } else {
+            msg.className = 'alert alert-error';
+            msg.innerHTML = `❌ ${res.message}`;
+            msg.style.display = 'block';
+            btn.disabled = false;
+            btn.textContent = 'Registrarse Ahora';
+        }
+    }
+
+    // --- LÓGICA DE LOGIN ---
+    if (target.id === 'loginForm') {
+        e.preventDefault();
+        const btn = target.querySelector('button[type="submit"]');
+        const msg = document.getElementById('loginMessage');
+
+        btn.disabled = true;
+        btn.innerHTML = '🔑 Validando...';
+
+        const email = document.getElementById('loginEmail').value;
+        const pass = document.getElementById('loginPass').value;
+
+        const res = await iniciarSesion(email, pass);
+        
+        if (res.success) {
+            // El observador en auth.js detectará el cambio y actualizará la UI
+            window.location.hash = 'inicio';
+        } else {
+            msg.className = 'alert alert-error';
+            msg.innerHTML = `❌ ${res.message}`;
+            msg.style.display = 'block';
+            btn.disabled = false;
+            btn.textContent = 'Entrar';
+        }
+    }
+});
+
+// ============================================
+// 3. EVENTOS DE NAVEGACIÓN Y UI
+// ============================================
+function setupGlobalEventListeners() {
+    
+    // --- Escuchar cambios en el Hash (Navegación SPA) ---
+    window.addEventListener('hashchange', () => {
+        const page = window.location.hash.replace('#', '') || 'inicio';
+        navigateTo(page);
+    });
+
+    // --- Sincronizar UI cuando cambie la Auth ---
+    document.addEventListener('authChanged', (e) => {
+        console.log('🔄 Sincronizando interfaz por cambio de estado...');
+        actualizarUIGlobal();
+    });
+
+    // --- Manejo del Menú Lateral (Mobile) ---
+    const menuToggle = document.getElementById('menuToggle');
+    const sidebar = document.getElementById('sidebar');
+    const overlay = document.getElementById('sidebarOverlay');
+
+    if (menuToggle) {
+        menuToggle.addEventListener('click', () => {
+            sidebar.classList.toggle('active');
+            overlay.classList.toggle('active');
+        });
+    }
+
+    if (overlay) {
+        overlay.addEventListener('click', () => {
+            sidebar.classList.remove('active');
+            overlay.classList.remove('active');
+        });
+    }
+
+    // --- Cerrar Sesión ---
+    const logoutBtn = document.getElementById('logoutNavLink');
+    if (logoutBtn) {
+        logoutBtn.addEventListener('click', async (e) => {
             e.preventDefault();
-            console.log('🚪 Cerrando sesión...');
-            await cerrarSesion();
-            actualizarUI();
-            // Redirigir a inicio después de cerrar sesión
-            if (typeof window.navigateTo === 'function') {
-                window.navigateTo('inicio');
-            } else {
-                window.location.hash = 'inicio';
+            if (confirm('¿Cerrar sesión en AXON-LAB?')) {
+                await cerrarSesion();
             }
         });
     }
 }
 
 // ============================================
-// CONFIGURAR MENÚ MÓVIL
+// 4. UTILIDADES DE CARGA
 // ============================================
-function setupMobileMenu() {
-    const menuToggle = document.getElementById('menuToggle');
-    const sidebar = document.getElementById('sidebar');
-    const overlay = document.getElementById('sidebarOverlay');
-    
-    if (menuToggle && sidebar && overlay) {
-        // Remover event listeners anteriores
-        const newMenuToggle = menuToggle.cloneNode(true);
-        menuToggle.parentNode.replaceChild(newMenuToggle, menuToggle);
-        
-        newMenuToggle.addEventListener('click', () => {
-            sidebar.classList.toggle('open');
-            overlay.classList.toggle('active');
-        });
-        
-        overlay.addEventListener('click', () => {
-            sidebar.classList.remove('open');
-            overlay.classList.remove('active');
-        });
-    }
-}
-
-// ============================================
-// ESCUCHAR CLICS EN ENLACES DEL MENÚ
-// ============================================
-function setupNavLinks() {
-    // Los enlaces ahora son manejados por router.js
-    // Solo aseguramos que los enlaces tengan data-page
-    document.querySelectorAll('.nav-link[data-page]').forEach(link => {
-        if (!link.hasAttribute('data-listener')) {
-            link.setAttribute('data-listener', 'true');
-            // No agregamos evento aquí porque router.js ya lo hace
-        }
-    });
-}
-
-// ============================================
-// INICIALIZAR APLICACIÓN
-// ============================================
-async function initApp() {
-    console.log('🚀 Iniciando AXON-LAB...');
-    
-    // 1. Inicializar autenticación
-    await initAuth();
-    
-    // 2. Actualizar UI
-    actualizarUI();
-    
-    // 3. Configurar listeners
-    setupAuthListener();
-    setupLogout();
-    setupMobileMenu();
-    setupNavLinks();
-    
-    // 4. Inicializar router (maneja hashchange y carga de páginas)
-    initRouter();
-    
-    // 5. Ocultar loader inicial
+export function showLoader() {
     const loader = document.getElementById('loader');
-    if (loader) {
-        setTimeout(() => {
-            loader.style.display = 'none';
-        }, 500);
-    }
-    
-    console.log('✅ AXON-LAB inicializado correctamente');
+    if (loader) loader.style.display = 'flex';
 }
 
-// ============================================
-// EXPORTAR FUNCIONES AL WINDOW
-// ============================================
-window.actualizarUIApp = actualizarUI;
-window.haySesionActiva = haySesionActiva;
-window.obtenerUsuarioActual = obtenerUsuarioActual;
-
-// ============================================
-// INICIAR
-// ============================================
-if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', initApp);
-} else {
-    initApp();
+export function hideLoader() {
+    const loader = document.getElementById('loader');
+    if (loader) loader.style.display = 'none';
 }
+
+console.log('✅ AXON-LAB inicializado correctamente');
