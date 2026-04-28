@@ -1,78 +1,55 @@
-// js/labs.js - Versión completa con Appwrite + funciones para router
-import { storage, databases, ID, DATABASE_ID, LABS_COLLECTION_ID, DOCUMENTS_BUCKET_ID } from './appwrite-config.js';
-import { haySesionActiva, obtenerUsuarioActual } from './auth.js';
+// js/labs.js - Migrado a Supabase
+import { supabase, LABS_BUCKET } from './supabase-config.js';
+import { obtenerUsuarioActual } from './auth.js';
 
-// Variable para el usuario actual (se actualiza desde auth)
 let currentUser = null;
-
-// ============================================
-// FUNCIÓN PARA ACTUALIZAR USUARIO
-// ============================================
-export function setCurrentUser(user) {
-    currentUser = user;
-}
-
-// ============================================
-// OBTENER USUARIO ACTUAL (con respaldo de auth)
-// ============================================
-function getCurrentUser() {
-    if (currentUser) return currentUser;
-    return obtenerUsuarioActual();
-}
+export function setCurrentUser(user) { currentUser = user; }
 
 // ============================================
 // SUBIR LABORATORIO
 // ============================================
 export async function uploadLab(file, title, description, category) {
-    const user = getCurrentUser();
+    const user = currentUser || obtenerUsuarioActual();
     
     if (!user) {
         return { success: false, error: 'Debes iniciar sesión para subir laboratorios' };
     }
     
     try {
-        // Validar archivo
-        if (!file) {
-            return { success: false, error: 'No se seleccionó ningún archivo' };
-        }
-        
-        // Validar tamaño (10MB)
+        if (!file) return { success: false, error: 'No se seleccionó ningún archivo' };
         if (file.size > 10 * 1024 * 1024) {
             return { success: false, error: 'El archivo no debe superar los 10MB' };
         }
         
-        // 1. Subir archivo a Storage
-        const fileResponse = await storage.createFile(
-            DOCUMENTS_BUCKET_ID,
-            ID.unique(),
-            file
-        );
+        const fileName = `${Date.now()}_${file.name.replace(/[^a-zA-Z0-9.-]/g, '_')}`;
         
-        // 2. Guardar metadatos en la base de datos
-        const metadata = {
-            title: title,
-            description: description,
-            category: category,
-            fileId: fileResponse.$id,
-            fileName: file.name,
-            fileSize: file.size,
-            fileType: file.type,
-            userId: user.$id,
-            userEmail: user.email,
-            userName: user.nombre || user.email,
-            createdAt: new Date().toISOString(),
-            downloads: 0
-        };
+        const { error: uploadError } = await supabase.storage
+            .from(LABS_BUCKET)
+            .upload(fileName, file);
         
-        const dbResponse = await databases.createDocument(
-            DATABASE_ID,
-            LABS_COLLECTION_ID,
-            ID.unique(),
-            metadata
-        );
+        if (uploadError) throw uploadError;
         
-        console.log('✅ Laboratorio subido:', dbResponse);
-        return { success: true, file: fileResponse, metadata: dbResponse };
+        const { data: doc, error: dbError } = await supabase
+            .from('laboratorios')
+            .insert({
+                title: title,
+                description: description,
+                category: category,
+                file_id: fileName,
+                file_name: file.name,
+                file_size: file.size,
+                file_type: file.type,
+                user_id: user.id,
+                user_email: user.email,
+                user_name: user.nombre
+            })
+            .select()
+            .single();
+        
+        if (dbError) throw dbError;
+        
+        console.log('✅ Laboratorio subido:', doc);
+        return { success: true, metadata: doc };
         
     } catch (error) {
         console.error('Error al subir:', error);
@@ -85,26 +62,40 @@ export async function uploadLab(file, title, description, category) {
 // ============================================
 export async function listLabs(category = null, limit = 50) {
     try {
-        let queries = [];
+        let query = supabase
+            .from('laboratorios')
+            .select('*')
+            .order('created_at', { ascending: false })
+            .limit(limit);
         
         if (category && category !== 'todos' && category !== '') {
-            queries.push(`category="${category}"`);
+            query = query.eq('category', category);
         }
         
-        // Ordenar por fecha más reciente
-        queries.push('orderDesc("createdAt")');
-        queries.push(`limit(${limit})`);
+        const { data, error } = await query;
         
-        const response = await databases.listDocuments(
-            DATABASE_ID,
-            LABS_COLLECTION_ID,
-            queries
-        );
+        if (error) throw error;
         
-        return { success: true, labs: response.documents };
+        const labs = data.map(lab => ({
+            $id: lab.id,
+            title: lab.title,
+            description: lab.description,
+            category: lab.category,
+            fileId: lab.file_id,
+            fileName: lab.file_name,
+            fileSize: lab.file_size,
+            fileType: lab.file_type,
+            userId: lab.user_id,
+            userEmail: lab.user_email,
+            userName: lab.user_name,
+            createdAt: lab.created_at,
+            downloads: lab.downloads
+        }));
+        
+        return { success: true, labs: labs };
         
     } catch (error) {
-        console.error('Error al listar laboratorios:', error);
+        console.error('Error al listar:', error);
         return { success: false, error: error.message, labs: [] };
     }
 }
@@ -114,14 +105,34 @@ export async function listLabs(category = null, limit = 50) {
 // ============================================
 export async function getLabById(labId) {
     try {
-        const response = await databases.getDocument(
-            DATABASE_ID,
-            LABS_COLLECTION_ID,
-            labId
-        );
-        return { success: true, lab: response };
+        const { data, error } = await supabase
+            .from('laboratorios')
+            .select('*')
+            .eq('id', labId)
+            .single();
+        
+        if (error) throw error;
+        
+        const lab = {
+            $id: data.id,
+            title: data.title,
+            description: data.description,
+            category: data.category,
+            fileId: data.file_id,
+            fileName: data.file_name,
+            fileSize: data.file_size,
+            fileType: data.file_type,
+            userId: data.user_id,
+            userEmail: data.user_email,
+            userName: data.user_name,
+            createdAt: data.created_at,
+            downloads: data.downloads
+        };
+        
+        return { success: true, lab: lab };
+        
     } catch (error) {
-        console.error('Error al obtener laboratorio:', error);
+        console.error('Error al obtener:', error);
         return { success: false, error: error.message };
     }
 }
@@ -131,8 +142,11 @@ export async function getLabById(labId) {
 // ============================================
 export async function getDownloadUrl(fileId) {
     try {
-        const url = storage.getFileView(DOCUMENTS_BUCKET_ID, fileId);
-        return url;
+        const { data: { publicUrl } } = supabase.storage
+            .from(LABS_BUCKET)
+            .getPublicUrl(fileId);
+        
+        return publicUrl;
     } catch (error) {
         console.error('Error al obtener URL:', error);
         return null;
@@ -140,20 +154,20 @@ export async function getDownloadUrl(fileId) {
 }
 
 // ============================================
-// INCREMENTAR CONTADOR DE DESCARGAS
+// INCREMENTAR CONTADOR
 // ============================================
 export async function incrementDownloads(labId, currentDownloads) {
     try {
-        const response = await databases.updateDocument(
-            DATABASE_ID,
-            LABS_COLLECTION_ID,
-            labId,
-            { downloads: (currentDownloads || 0) + 1 }
-        );
-        return response;
+        const { error } = await supabase
+            .from('laboratorios')
+            .update({ downloads: (currentDownloads || 0) + 1 })
+            .eq('id', labId);
+        
+        if (error) throw error;
+        return true;
     } catch (error) {
-        console.error('Error al actualizar descargas:', error);
-        return null;
+        console.error('Error al actualizar:', error);
+        return false;
     }
 }
 
@@ -161,25 +175,21 @@ export async function incrementDownloads(labId, currentDownloads) {
 // ELIMINAR LABORATORIO
 // ============================================
 export async function deleteLab(labId, fileId, userId) {
-    const user = getCurrentUser();
+    const user = currentUser || obtenerUsuarioActual();
     
-    if (!user) {
-        return { success: false, error: 'Debes iniciar sesión para eliminar laboratorios' };
-    }
-    
-    // Verificar permisos (solo el dueño puede eliminar)
-    if (user.$id !== userId && user.email !== userId) {
-        return { success: false, error: 'No tienes permisos para eliminar este laboratorio' };
-    }
+    if (!user) return { success: false, error: 'Debes iniciar sesión' };
+    if (user.id !== userId) return { success: false, error: 'No tienes permisos' };
     
     try {
-        // Eliminar de la base de datos
-        await databases.deleteDocument(DATABASE_ID, LABS_COLLECTION_ID, labId);
+        await supabase.storage.from(LABS_BUCKET).remove([fileId]);
         
-        // Eliminar archivo del storage
-        await storage.deleteFile(DOCUMENTS_BUCKET_ID, fileId);
+        const { error } = await supabase
+            .from('laboratorios')
+            .delete()
+            .eq('id', labId);
         
-        console.log('✅ Laboratorio eliminado:', labId);
+        if (error) throw error;
+        
         return { success: true };
         
     } catch (error) {
@@ -193,479 +203,135 @@ export async function deleteLab(labId, fileId, userId) {
 // ============================================
 export async function getUniqueCategories() {
     try {
-        const result = await listLabs();
-        if (!result.success) return [];
+        const { data, error } = await supabase
+            .from('laboratorios')
+            .select('category')
+            .not('category', 'is', null);
+        
+        if (error) throw error;
         
         const categories = new Set();
         categories.add('todos');
-        
-        result.labs.forEach(lab => {
-            if (lab.category) categories.add(lab.category);
+        data.forEach(item => {
+            if (item.category) categories.add(item.category);
         });
         
         return Array.from(categories);
+        
     } catch (error) {
-        console.error('Error al obtener categorías:', error);
         return ['todos'];
     }
 }
 
 // ============================================
+// FUNCIONES PARA ROUTER
 // ============================================
-// FUNCIONES PARA EL ROUTER (init Pages)
-// ============================================
-// ============================================
-
-// ============================================
-// INICIALIZAR PÁGINA DE INICIO
-// ============================================
-export async function initHomePage() {
-    console.log('🏠 Inicializando página de inicio');
-    
-    const container = document.querySelector('.home-container, #labs-container, .labs-grid');
-    if (!container) {
-        // Crear contenedor si no existe
-        const contentDiv = document.getElementById('page-content');
-        if (contentDiv && !contentDiv.querySelector('.labs-grid')) {
-            contentDiv.innerHTML += `
-                <div class="home-container">
-                    <div class="hero-section">
-                        <h1>Bienvenido a AXON-LAB</h1>
-                        <p>Laboratorios académicos para tu aprendizaje</p>
-                    </div>
-                    <div class="labs-grid" id="labs-grid"></div>
+export async function initHomePage() { 
+    console.log('🏠 Inicio');
+    const container = document.getElementById('labs-grid');
+    if (container) {
+        const result = await listLabs();
+        if (result.success && result.labs.length > 0) {
+            // Mostrar últimos 3 laboratorios
+            const ultimos = result.labs.slice(0, 3);
+            container.innerHTML = ultimos.map(lab => `
+                <div class="lab-card" data-id="${lab.$id}">
+                    <h3>${lab.title}</h3>
+                    <p>${lab.description?.substring(0, 100)}...</p>
+                    <small>📁 ${lab.category}</small>
                 </div>
-            `;
+            `).join('');
         }
     }
-    
-    await cargarLaboratoriosEnGrid('todos', 'labs-grid');
 }
 
-// ============================================
-// INICIALIZAR PÁGINA DE LABORATORIOS
-// ============================================
-export async function initLabsPage() {
-    console.log('📚 Inicializando página de laboratorios');
-    
-    // Buscar contenedor o crearlo
-    let gridContainer = document.getElementById('labs-grid');
-    if (!gridContainer) {
-        const contentDiv = document.getElementById('page-content');
-        if (contentDiv) {
-            contentDiv.innerHTML = `
-                <div class="labs-page">
-                    <div class="filters-section">
-                        <h2>📚 Laboratorios</h2>
-                        <div class="category-filters" id="category-filters">
-                            <button class="filter-btn active" data-category="todos">Todos</button>
-                        </div>
-                    </div>
-                    <div class="labs-grid" id="labs-grid">
-                        <div class="loader">Cargando laboratorios...</div>
-                    </div>
-                </div>
-            `;
-            gridContainer = document.getElementById('labs-grid');
-        }
-    }
-    
-    // Cargar categorías
-    await cargarCategorias();
-    
-    // Cargar laboratorios
-    await cargarLaboratoriosEnGrid('todos', 'labs-grid');
-    
-    // Configurar eventos de filtros
-    configurarFiltros();
+export async function initLabsPage() { 
+    console.log('📚 Laboratorios');
+    await cargarLaboratorios();
 }
 
-// ============================================
-// INICIALIZAR PÁGINA DE CATEGORÍAS
-// ============================================
-export async function initCategoriesPage() {
-    console.log('🏷️ Inicializando página de categorías');
-    
+export async function initCategoriesPage() { 
+    console.log('🏷️ Categorías');
     const categories = await getUniqueCategories();
-    const contentDiv = document.getElementById('page-content');
-    
-    if (contentDiv) {
-        let html = `
-            <div class="categories-page">
-                <h2>📂 Categorías de Laboratorios</h2>
-                <div class="categories-grid" id="categories-grid">
-        `;
-        
-        for (const cat of categories) {
-            if (cat === 'todos') continue;
-            const labs = await listLabs(cat);
-            const count = labs.success ? labs.labs.length : 0;
-            html += `
-                <div class="category-card" data-category="${cat}">
-                    <div class="category-icon">📁</div>
-                    <h3>${cat}</h3>
-                    <p>${count} laboratorio${count !== 1 ? 's' : ''}</p>
-                </div>
-            `;
-        }
-        
-        html += `
-                </div>
+    const container = document.getElementById('listaCategorias');
+    if (container) {
+        container.innerHTML = categories.filter(c => c !== 'todos').map(cat => `
+            <div class="category-card" data-category="${cat}">
+                <h3>📁 ${cat}</h3>
+                <button onclick="window.location.hash='laboratorios'">Ver</button>
             </div>
-        `;
-        
-        contentDiv.innerHTML = html;
-        
-        // Configurar clic en categorías
-        document.querySelectorAll('.category-card').forEach(card => {
-            card.addEventListener('click', () => {
-                const category = card.dataset.category;
-                if (category && typeof window.navigateTo === 'function') {
-                    window.navigateTo('laboratorios');
-                    // Guardar categoría seleccionada
-                    sessionStorage.setItem('selectedCategory', category);
-                }
-            });
-        });
+        `).join('');
     }
 }
 
-// ============================================
-// INICIALIZAR PÁGINA DE SUBIR
-// ============================================
-export async function initUploadPage() {
-    console.log('📤 Inicializando página de subir laboratorio');
-    
-    const user = getCurrentUser();
-    if (!user) {
-        // Redirigir a login si no hay sesión
-        if (typeof window.navigateTo === 'function') {
-            window.navigateTo('login');
-        }
-        return;
-    }
-    
-    // Verificar si ya existe el formulario
-    const existingForm = document.getElementById('upload-form');
-    if (existingForm) return;
-    
-    const contentDiv = document.getElementById('page-content');
-    if (!contentDiv) return;
-    
-    contentDiv.innerHTML = `
-        <div class="upload-page">
-            <h2>📤 Subir Laboratorio</h2>
-            <p>Completa el formulario para compartir tu laboratorio</p>
+export async function initUploadPage() { 
+    console.log('📤 Subir laboratorio');
+    const form = document.getElementById('formSubir');
+    if (form) {
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const title = document.getElementById('labNombre').value;
+            const description = document.getElementById('labDescripcion').value;
+            const category = document.getElementById('labCategoria').value;
+            const file = document.getElementById('labArchivo').files[0];
             
-            <form id="upload-form" class="upload-form">
-                <div class="form-group">
-                    <label for="lab-title">Título del laboratorio *</label>
-                    <input type="text" id="lab-title" required placeholder="Ej: Introducción a la Programación">
-                </div>
-                
-                <div class="form-group">
-                    <label for="lab-category">Categoría *</label>
-                    <select id="lab-category" required>
-                        <option value="">Selecciona una categoría</option>
-                        <option value="Programación">💻 Programación</option>
-                        <option value="Matemáticas">📐 Matemáticas</option>
-                        <option value="Física">⚡ Física</option>
-                        <option value="Química">🧪 Química</option>
-                        <option value="Biología">🧬 Biología</option>
-                        <option value="Idiomas">🌐 Idiomas</option>
-                        <option value="Otros">📚 Otros</option>
-                    </select>
-                </div>
-                
-                <div class="form-group">
-                    <label for="lab-description">Descripción *</label>
-                    <textarea id="lab-description" rows="5" required placeholder="Describe el contenido del laboratorio..."></textarea>
-                </div>
-                
-                <div class="form-group">
-                    <label for="lab-file">Archivo (PDF/DOCX/ZIP) *</label>
-                    <input type="file" id="lab-file" accept=".pdf,.docx,.zip,.rar" required>
-                    <small>Máximo 10MB. Formatos permitidos: PDF, DOCX, ZIP</small>
-                </div>
-                
-                <div id="upload-message"></div>
-                
-                <button type="submit" class="btn btn-primary">📤 Publicar Laboratorio</button>
-            </form>
-        </div>
-    `;
-    
-    // Configurar evento del formulario
-    const form = document.getElementById('upload-form');
-    const messageDiv = document.getElementById('upload-message');
-    
-    form.addEventListener('submit', async (e) => {
-        e.preventDefault();
-        
-        const title = document.getElementById('lab-title').value.trim();
-        const category = document.getElementById('lab-category').value;
-        const description = document.getElementById('lab-description').value.trim();
-        const file = document.getElementById('lab-file').files[0];
-        
-        if (!title || !category || !description || !file) {
-            messageDiv.innerHTML = '<div class="alert alert-error">⚠️ Completa todos los campos</div>';
-            return;
-        }
-        
-        const btn = form.querySelector('button');
-        const originalText = btn.textContent;
-        btn.textContent = '⏳ Subiendo...';
-        btn.disabled = true;
-        
-        const result = await uploadLab(file, title, description, category);
-        
-        if (result.success) {
-            messageDiv.innerHTML = '<div class="alert alert-success">✅ ¡Laboratorio subido exitosamente!</div>';
-            form.reset();
-            
-            setTimeout(() => {
-                if (typeof window.navigateTo === 'function') {
-                    window.navigateTo('laboratorios');
-                }
-            }, 2000);
-        } else {
-            messageDiv.innerHTML = `<div class="alert alert-error">❌ ${result.error}</div>`;
-            btn.textContent = originalText;
-            btn.disabled = false;
-        }
-    });
-}
-
-// ============================================
-// INICIALIZAR PÁGINA DE DETALLE
-// ============================================
-export async function initDetailPage() {
-    console.log('🔍 Inicializando página de detalle');
-    
-    // Obtener ID del laboratorio de los parámetros
-    const params = new URLSearchParams(window.location.hash.split('?')[1] || '');
-    let labId = params.get('id');
-    
-    // Si no está en hash, buscar en sessionStorage
-    if (!labId) {
-        const navParams = sessionStorage.getItem('navigationParams');
-        if (navParams) {
-            try {
-                const parsed = JSON.parse(navParams);
-                labId = parsed.id;
-            } catch (e) {}
-        }
-    }
-    
-    if (!labId) {
-        const contentDiv = document.getElementById('page-content');
-        if (contentDiv) {
-            contentDiv.innerHTML = '<div class="alert alert-error">❌ No se especificó ningún laboratorio</div>';
-        }
-        return;
-    }
-    
-    const result = await getLabById(labId);
-    
-    if (!result.success || !result.lab) {
-        const contentDiv = document.getElementById('page-content');
-        if (contentDiv) {
-            contentDiv.innerHTML = '<div class="alert alert-error">❌ Laboratorio no encontrado</div>';
-        }
-        return;
-    }
-    
-    const lab = result.lab;
-    const user = getCurrentUser();
-    const isOwner = user && (user.$id === lab.userId || user.email === lab.userEmail);
-    
-    const contentDiv = document.getElementById('page-content');
-    if (!contentDiv) return;
-    
-    contentDiv.innerHTML = `
-        <div class="detail-page">
-            <button class="btn-back" onclick="window.navigateTo('laboratorios')">← Volver</button>
-            
-            <div class="detail-card">
-                <h1>${escapeHtml(lab.title)}</h1>
-                
-                <div class="detail-meta">
-                    <span class="meta-category">📁 ${escapeHtml(lab.category)}</span>
-                    <span class="meta-author">👤 ${escapeHtml(lab.userName)}</span>
-                    <span class="meta-date">📅 ${new Date(lab.createdAt).toLocaleDateString()}</span>
-                    <span class="meta-downloads">⬇️ ${lab.downloads || 0} descargas</span>
-                </div>
-                
-                <div class="detail-description">
-                    <h3>Descripción</h3>
-                    <p>${escapeHtml(lab.description)}</p>
-                </div>
-                
-                <div class="detail-actions">
-                    <button id="download-btn" class="btn btn-primary">📥 Descargar Laboratorio</button>
-                    ${isOwner ? `<button id="delete-btn" class="btn btn-danger">🗑️ Eliminar Laboratorio</button>` : ''}
-                </div>
-                
-                <div id="detail-message"></div>
-            </div>
-        </div>
-    `;
-    
-    // Configurar descarga
-    const downloadBtn = document.getElementById('download-btn');
-    if (downloadBtn) {
-        downloadBtn.addEventListener('click', async () => {
-            const url = await getDownloadUrl(lab.fileId);
-            if (url) {
-                window.open(url, '_blank');
-                await incrementDownloads(lab.$id, lab.downloads);
-                lab.downloads = (lab.downloads || 0) + 1;
-                const downloadsSpan = document.querySelector('.meta-downloads');
-                if (downloadsSpan) {
-                    downloadsSpan.textContent = `⬇️ ${lab.downloads} descargas`;
-                }
+            const result = await uploadLab(file, title, description, category);
+            const msgDiv = document.getElementById('msgSubir');
+            if (result.success) {
+                msgDiv.innerHTML = '<div class="alert alert-success">✅ Laboratorio subido</div>';
+                setTimeout(() => window.location.hash = 'laboratorios', 1500);
             } else {
-                const msgDiv = document.getElementById('detail-message');
-                msgDiv.innerHTML = '<div class="alert alert-error">❌ Error al obtener el archivo</div>';
-            }
-        });
-    }
-    
-    // Configurar eliminación
-    const deleteBtn = document.getElementById('delete-btn');
-    if (deleteBtn) {
-        deleteBtn.addEventListener('click', async () => {
-            if (confirm('¿Estás seguro de que deseas eliminar este laboratorio? Esta acción no se puede deshacer.')) {
-                const result = await deleteLab(lab.$id, lab.fileId, lab.userId);
-                const msgDiv = document.getElementById('detail-message');
-                
-                if (result.success) {
-                    msgDiv.innerHTML = '<div class="alert alert-success">✅ Laboratorio eliminado exitosamente</div>';
-                    setTimeout(() => {
-                        if (typeof window.navigateTo === 'function') {
-                            window.navigateTo('laboratorios');
-                        }
-                    }, 1500);
-                } else {
-                    msgDiv.innerHTML = `<div class="alert alert-error">❌ ${result.error}</div>`;
-                }
+                msgDiv.innerHTML = `<div class="alert alert-error">❌ ${result.error}</div>`;
             }
         });
     }
 }
 
-// ============================================
-// FUNCIONES AUXILIARES
-// ============================================
+export async function initDetailPage() { 
+    console.log('🔍 Detalle');
+    const params = new URLSearchParams(window.location.hash.split('?')[1]);
+    const id = params.get('id');
+    if (id) {
+        const result = await getLabById(id);
+        if (result.success) {
+            const lab = result.lab;
+            const container = document.getElementById('detalleContent');
+            if (container) {
+                container.innerHTML = `
+                    <h2>${lab.title}</h2>
+                    <p>${lab.description}</p>
+                    <p>Categoría: ${lab.category}</p>
+                    <p>Autor: ${lab.userName}</p>
+                    <button id="downloadBtn" class="btn btn-primary">📥 Descargar</button>
+                `;
+                document.getElementById('downloadBtn')?.addEventListener('click', async () => {
+                    const url = await getDownloadUrl(lab.fileId);
+                    if (url) window.open(url, '_blank');
+                });
+            }
+        }
+    }
+}
 
-async function cargarLaboratoriosEnGrid(category, containerId) {
-    const container = document.getElementById(containerId);
+async function cargarLaboratorios() {
+    const container = document.getElementById('listaLaboratorios');
     if (!container) return;
     
-    container.innerHTML = '<div class="loader">Cargando laboratorios...</div>';
+    container.innerHTML = '<div class="loader">Cargando...</div>';
+    const result = await listLabs();
     
-    const result = await listLabs(category === 'todos' ? null : category);
-    
-    if (!result.success || result.labs.length === 0) {
-        container.innerHTML = `
-            <div class="empty-state">
-                <p>📭 No hay laboratorios disponibles en esta categoría</p>
-                ${haySesionActiva() ? '<a href="#subir" class="btn btn-primary">➕ Subir el primero</a>' : ''}
+    if (result.success && result.labs.length > 0) {
+        container.innerHTML = result.labs.map(lab => `
+            <div class="lab-card">
+                <h3>${lab.title}</h3>
+                <p>${lab.description?.substring(0, 100)}...</p>
+                <p>📁 ${lab.category} | 👤 ${lab.userName} | ⬇️ ${lab.downloads}</p>
+                <button onclick="window.location.hash='detalle?id=${lab.$id}'">Ver más</button>
             </div>
-        `;
-        return;
-    }
-    
-    let html = '<div class="labs-grid">';
-    for (const lab of result.labs) {
-        html += `
-            <div class="lab-card" data-id="${lab.$id}">
-                <div class="lab-icon">📄</div>
-                <h3>${escapeHtml(lab.title)}</h3>
-                <p class="lab-description">${escapeHtml(lab.description.substring(0, 100))}${lab.description.length > 100 ? '...' : ''}</p>
-                <div class="lab-meta">
-                    <span class="lab-category">📁 ${escapeHtml(lab.category)}</span>
-                    <span class="lab-downloads">⬇️ ${lab.downloads || 0}</span>
-                </div>
-                <div class="lab-author">👤 ${escapeHtml(lab.userName)}</div>
-                <button class="btn-view" data-id="${lab.$id}">Ver Detalle</button>
-            </div>
-        `;
-    }
-    html += '</div>';
-    
-    container.innerHTML = html;
-    
-    // Configurar eventos de los botones "Ver Detalle"
-    document.querySelectorAll('.btn-view').forEach(btn => {
-        btn.addEventListener('click', () => {
-            const id = btn.dataset.id;
-            if (typeof window.navigateTo === 'function') {
-                window.navigateTo('detalle', { id: id });
-            } else {
-                window.location.hash = `detalle?id=${id}`;
-            }
-        });
-    });
-}
-
-async function cargarCategorias() {
-    const categories = await getUniqueCategories();
-    const filtersContainer = document.getElementById('category-filters');
-    if (!filtersContainer) return;
-    
-    let html = '';
-    for (const cat of categories) {
-        html += `<button class="filter-btn" data-category="${cat}">${cat === 'todos' ? '📋 Todos' : `📁 ${cat}`}</button>`;
-    }
-    filtersContainer.innerHTML = html;
-}
-
-function configurarFiltros() {
-    const filters = document.querySelectorAll('.filter-btn');
-    if (!filters.length) return;
-    
-    filters.forEach(filter => {
-        filter.addEventListener('click', async () => {
-            // Actualizar clase activa
-            filters.forEach(f => f.classList.remove('active'));
-            filter.classList.add('active');
-            
-            const category = filter.dataset.category;
-            await cargarLaboratoriosEnGrid(category, 'labs-grid');
-        });
-    });
-    
-    // Verificar si hay una categoría seleccionada previamente
-    const selectedCategory = sessionStorage.getItem('selectedCategory');
-    if (selectedCategory) {
-        const filterToActivate = Array.from(filters).find(f => f.dataset.category === selectedCategory);
-        if (filterToActivate) {
-            filterToActivate.click();
-            sessionStorage.removeItem('selectedCategory');
-        }
+        `).join('');
+    } else {
+        container.innerHTML = '<p>No hay laboratorios disponibles.</p>';
     }
 }
 
-function escapeHtml(text) {
-    if (!text) return '';
-    const div = document.createElement('div');
-    div.textContent = text;
-    return div.innerHTML;
-}
-
-// ============================================
-// EXPORTAR FUNCIONES AL WINDOW
-// ============================================
-window.uploadLab = uploadLab;
-window.listLabs = listLabs;
-window.getLabById = getLabById;
-window.getDownloadUrl = getDownloadUrl;
-window.deleteLab = deleteLab;
-window.initHomePage = initHomePage;
-window.initLabsPage = initLabsPage;
-window.initCategoriesPage = initCategoriesPage;
-window.initUploadPage = initUploadPage;
-window.initDetailPage = initDetailPage;
-
-console.log('✅ Labs.js cargado con Appwrite + funciones para router');
+console.log('✅ Labs.js migrado a Supabase');
