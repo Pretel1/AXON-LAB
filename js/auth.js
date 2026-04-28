@@ -1,15 +1,9 @@
-// js/auth.js
 import { supabase } from './supabase-config.js';
 import { setCurrentUser } from './labs.js';
 
 let currentUser = null;
 
-// ============================================
-// ESCUCHAR CAMBIOS DE SESIÓN (CLAVE)
-// ============================================
 supabase.auth.onAuthStateChange(async (event, session) => {
-    console.log('🔄 Auth change:', event);
-
     if (session?.user) {
         await initAuth();
     } else {
@@ -19,170 +13,88 @@ supabase.auth.onAuthStateChange(async (event, session) => {
     }
 });
 
-// ============================================
-// INICIALIZAR AUTENTICACIÓN
-// ============================================
 export async function initAuth() {
     const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return null;
 
-    if (!user) {
-        currentUser = null;
-        setCurrentUser(null);
-        return null;
-    }
-
-    // 🔥 CAMBIO: usar "perfiles"
-    const { data: profile } = await supabase
-        .from('perfiles')
-        .select('*')
-        .eq('id', user.id)
-        .single();
+    const { data: profile } = await supabase.from('perfiles').select('*').eq('id', user.id).single();
 
     currentUser = {
         id: user.id,
         nombre: profile?.nombre || user.email,
         email: user.email,
+        rol: profile?.rol || 'estudiante',
         emailVerificado: !!user.email_confirmed_at
     };
 
     setCurrentUser(currentUser);
     actualizarUIGlobal();
-
     return currentUser;
 }
 
-// ============================================
-// REGISTRAR USUARIO (FIX CLAVE)
-// ============================================
 export async function registrarUsuario(nombre, email, password) {
-    if (!password || password.length < 8) {
-        return { success: false, message: '⚠️ Mínimo 8 caracteres.' };
-    }
-
+    if (!password || password.length < 8) return { success: false, message: '⚠️ Mínimo 8 caracteres.' };
+    
     try {
-        const { data, error } = await supabase.auth.signUp({
-            email,
-            password
-        });
-
+        const { data, error } = await supabase.auth.signUp({ email, password });
         if (error) throw error;
 
-        // 🔥 CREAR PERFIL (IMPORTANTE)
         if (data.user) {
             await supabase.from('perfiles').insert({
                 id: data.user.id,
                 nombre,
-                email
+                email,
+                rol: 'estudiante'
             });
         }
-
-        return {
-            success: true,
-            message: '✅ Revisa tu correo para verificar tu cuenta.'
-        };
-
+        return { success: true, message: '✅ Revisa tu correo para verificar tu cuenta.' };
     } catch (error) {
-        if (error.message.includes('already registered')) {
-            return { success: false, message: '❌ Correo ya registrado' };
-        }
         return { success: false, message: error.message };
     }
 }
 
-// ============================================
-// LOGIN
-// ============================================
 export async function iniciarSesion(email, password) {
     try {
-        const { error } = await supabase.auth.signInWithPassword({
-            email,
-            password
-        });
-
+        const { error } = await supabase.auth.signInWithPassword({ email, password });
         if (error) throw error;
-
         await initAuth();
-
-        return {
-            success: true,
-            message: '🎉 Bienvenido'
-        };
-
+        return { success: true, message: '🎉 Bienvenido' };
     } catch (error) {
-        return {
-            success: false,
-            message: '❌ Credenciales incorrectas'
-        };
+        return { success: false, message: '❌ Credenciales incorrectas' };
     }
 }
 
-// ============================================
-// GOOGLE LOGIN
-// ============================================
-export async function iniciarSesionConGoogle() {
-    await supabase.auth.signInWithOAuth({
-        provider: 'google',
-        options: {
-            redirectTo: 'https://pretel1.github.io/AXON-LAB/'
-        }
-    });
-}
+export async function cerrarSesion() { await supabase.auth.signOut(); }
 
-// ============================================
-// LOGOUT
-// ============================================
-export async function cerrarSesion() {
-    await supabase.auth.signOut();
-}
-
-// ============================================
-// RESET PASSWORD
-// ============================================
 export async function recuperarPassword(email) {
     const { error } = await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo: 'https://pretel1.github.io/AXON-LAB/pages/restablecer.html'
+        redirectTo: window.location.origin + '/AXON-LAB/#restablecer'
     });
-
-    if (error) {
-        return { success: false, message: error.message };
-    }
-
-    return {
-        success: true,
-        message: '📧 Revisa tu correo'
-    };
+    if (error) return { success: false, message: error.message };
+    return { success: true, message: '📧 Revisa tu correo' };
 }
 
-// ============================================
-// HELPERS
-// ============================================
+export async function restablecerPassword(nuevaPassword) {
+    const { error } = await supabase.auth.updateUser({ password: nuevaPassword });
+    if (error) return { success: false, message: error.message };
+    return { success: true, message: 'Contraseña actualizada' };
+}
+
 export function obtenerUsuarioActual() { return currentUser; }
 export function haySesionActiva() { return !!currentUser; }
 
-// ============================================
-// UI GLOBAL
-// ============================================
 export function actualizarUIGlobal() {
     const isAuth = haySesionActiva();
     const user = obtenerUsuarioActual();
-
     const userNameSpan = document.getElementById('userName');
     if (userNameSpan) userNameSpan.textContent = user?.nombre || 'Invitado';
 
-    const registro = document.getElementById('registroNavLink');
-    const login = document.getElementById('loginNavLink');
-    const logout = document.getElementById('logoutNavLink');
-    const subir = document.getElementById('subirNavLink');
+    const rolesMap = { 'estudiante': 'none', 'profesor': 'flex', 'admin': 'flex' };
+    const canUpload = isAuth && user ? rolesMap[user.rol] : 'none';
 
-    if (registro) registro.style.display = isAuth ? 'none' : 'flex';
-    if (login) login.style.display = isAuth ? 'none' : 'flex';
-    if (logout) logout.style.display = isAuth ? 'flex' : 'none';
-    if (subir) subir.style.display = isAuth ? 'flex' : 'none';
+    document.getElementById('registroNavLink')?.style.setProperty('display', isAuth ? 'none' : 'flex');
+    document.getElementById('loginNavLink')?.style.setProperty('display', isAuth ? 'none' : 'flex');
+    document.getElementById('logoutNavLink')?.style.setProperty('display', isAuth ? 'flex' : 'none');
+    document.getElementById('subirNavLink')?.style.setProperty('display', canUpload);
 }
-
-// ============================================
-// INIT
-// ============================================
 initAuth();
-
-console.log('✅ Auth listo PRO');
