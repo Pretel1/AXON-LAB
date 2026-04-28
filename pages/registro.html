@@ -1,343 +1,96 @@
-<div class="form-card" id="registroContainer">
-    <!-- ========================================== -->
-    <!-- PASO 1: FORMULARIO DE REGISTRO -->
-    <!-- ========================================== -->
-    <div id="pasoRegistro" style="display: block;">
-        <h2>📝 Registrarse</h2>
-        <p>Crea tu cuenta en AXON-LAB</p>
+<div class="form-container animate-fade-in-up">
+    <div class="form-card">
+        <div style="text-align: center; margin-bottom: 2rem;">
+            <h2 class="text-gradient">Crear Cuenta AXON</h2>
+            <p style="color: var(--text-secondary); font-size: var(--text-sm);">
+                Únete a la plataforma de laboratorios de ingeniería
+            </p>
+        </div>
         
-        <form id="formRegistro">
+        <form id="registroForm">
             <div class="form-group">
-                <label class="form-label required">Nombre completo</label>
-                <input type="text" id="regNombre" class="form-input" placeholder="Ej: Juan Pérez" required>
+                <label for="regNombre" class="form-label required">Nombre Completo</label>
+                <input type="text" id="regNombre" class="form-input" placeholder="Ej. Dany Pretel" required>
             </div>
             
             <div class="form-group">
-                <label class="form-label required">Correo electrónico</label>
-                <input type="email" id="regEmail" class="form-input" placeholder="ejemplo@correo.com" required>
-                <small class="form-help">📧 Se enviará un código de verificación a este correo</small>
+                <label for="regEmail" class="form-label required">Correo Electrónico</label>
+                <input type="email" id="regEmail" class="form-input" placeholder="usuario@axon.edu" required>
+                <small class="form-help">Utiliza un correo válido para verificar tu cuenta.</small>
             </div>
             
             <div class="form-group">
-                <label class="form-label required">Contraseña</label>
-                <input type="password" id="regPassword" class="form-input" placeholder="Mínimo 8 caracteres" required>
-                <small class="form-help">🔒 La contraseña debe tener al menos 8 caracteres</small>
+                <label for="regPass" class="form-label required">Contraseña</label>
+                <input type="password" id="regPass" class="form-input" placeholder="Mínimo 8 caracteres" required minlength="8">
             </div>
+
+            <button type="submit" id="regBtn" class="btn btn-primary" style="width: 100%; margin-top: 1rem;">
+                Registrarse Ahora
+            </button>
             
-            <div class="form-group">
-                <label class="form-label required">Confirmar contraseña</label>
-                <input type="password" id="regConfirm" class="form-input" placeholder="Repite tu contraseña" required>
-            </div>
-            
-            <button type="submit" class="btn btn-primary" id="btnRegistrar">📝 Registrarse</button>
-            <div id="msgRegistro"></div>
+            <div id="regMessage" class="alert" style="display: none; margin-top: 1.5rem;"></div>
         </form>
+
+        <div class="divider">O</div>
         
-        <p>¿Ya tienes cuenta? <a href="#" onclick="window.location.hash='login'; return false;">Inicia sesión aquí</a></p>
-        <p>o</p>
-        <button id="googleRegistroBtn" class="btn btn-google">🚀 Registrarse con Google</button>
-    </div>
-    
-    <!-- ========================================== -->
-    <!-- PASO 2: VERIFICACIÓN POR CÓDIGO -->
-    <!-- ========================================== -->
-    <div id="pasoVerificacion" style="display: none;">
-        <h2>✉️ Verificar tu correo</h2>
-        
-        <div class="verificacion-info">
-            <p>Hemos enviado un código de verificación a:</p>
-            <p><strong id="emailEnviado"></strong></p>
-            <p class="form-help">📬 Revisa tu bandeja de entrada y también la carpeta de spam.</p>
-        </div>
-        
-        <form id="formVerificacion">
-            <div class="form-group">
-                <label class="form-label required">Código de verificación</label>
-                <input type="text" id="codigoVerificacion" class="form-input" placeholder="Ingresa el código de 6 dígitos" maxlength="6" required>
-                <small class="form-help">✉️ Ingresa el código que recibiste por correo electrónico</small>
-            </div>
-            
-            <button type="submit" class="btn btn-success" id="btnVerificar">✅ Verificar cuenta</button>
-            <div id="msgVerificacion"></div>
-        </form>
-        
-        <div class="verificacion-actions">
-            <p>¿No recibiste el código?</p>
-            <button id="btnReenviar" class="btn btn-outline">🔄 Reenviar código</button>
-            <button id="btnVolverRegistro" class="btn btn-link">← Volver al registro</button>
-        </div>
-    </div>
-    
-    <!-- ========================================== -->
-    <!-- PASO 3: REGISTRO EXITOSO (Mensaje final) -->
-    <!-- ========================================== -->
-    <div id="pasoExito" style="display: none;">
-        <div class="exito-container">
-            <div class="exito-icono">✅</div>
-            <h2>¡Cuenta verificada exitosamente!</h2>
-            <p>Tu cuenta ha sido creada y verificada correctamente.</p>
-            <p>Ya puedes acceder a todas las funciones de AXON-LAB.</p>
-            <button id="btnIrLogin" class="btn btn-primary">🔐 Iniciar sesión</button>
-        </div>
+        <p style="text-align: center; font-size: var(--text-sm); color: var(--text-muted);">
+            ¿Ya eres miembro? <a href="#login" style="color: var(--color-primary); font-weight: var(--font-bold);">Inicia sesión aquí</a>
+        </p>
     </div>
 </div>
 
-<style>
-    /* Estilos específicos para verificación */
-    .verificacion-info {
-        background: #e3f2fd;
-        padding: 1rem;
-        border-radius: 8px;
-        margin-bottom: 1.5rem;
-        text-align: center;
-    }
-    
-    .verificacion-actions {
-        margin-top: 1.5rem;
-        text-align: center;
-        padding-top: 1rem;
-        border-top: 1px solid #ddd;
-    }
-    
-    .btn-success {
-        background: #28a745;
-        color: white;
-        width: 100%;
-    }
-    
-    .btn-success:hover {
-        background: #218838;
-    }
-    
-    .btn-outline {
-        background: transparent;
-        border: 2px solid #007bff;
-        color: #007bff;
-        margin-top: 0.5rem;
-    }
-    
-    .btn-outline:hover {
-        background: #007bff;
-        color: white;
-    }
-    
-    .btn-link {
-        background: none;
-        color: #007bff;
-        text-decoration: underline;
-        margin-top: 0.5rem;
-    }
-    
-    .exito-container {
-        text-align: center;
-        padding: 2rem;
-    }
-    
-    .exito-icono {
-        font-size: 4rem;
-        margin-bottom: 1rem;
-    }
-    
-    .alert {
-        padding: 0.75rem;
-        border-radius: 4px;
-        margin-top: 1rem;
-    }
-    
-    .alert-success {
-        background: #d4edda;
-        color: #155724;
-        border: 1px solid #c3e6cb;
-    }
-    
-    .alert-error {
-        background: #f8d7da;
-        color: #721c24;
-        border: 1px solid #f5c6cb;
-    }
-    
-    .alert-info {
-        background: #d1ecf1;
-        color: #0c5460;
-        border: 1px solid #bee5eb;
-    }
-</style>
-
 <script type="module">
-    import { 
-        registrarUsuario, 
-        verificarEmail, 
-        reenviarCodigoVerificacion,
-        iniciarSesionConGoogle 
-    } from '../js/auth.js';
-    
-    // Elementos del DOM
-    const pasoRegistro = document.getElementById('pasoRegistro');
-    const pasoVerificacion = document.getElementById('pasoVerificacion');
-    const pasoExito = document.getElementById('pasoExito');
-    
-    const formRegistro = document.getElementById('formRegistro');
-    const formVerificacion = document.getElementById('formVerificacion');
-    
-    const msgRegistro = document.getElementById('msgRegistro');
-    const msgVerificacion = document.getElementById('msgVerificacion');
-    
-    const emailEnviadoSpan = document.getElementById('emailEnviado');
-    const codigoInput = document.getElementById('codigoVerificacion');
-    
-    // Variables para almacenar datos del registro temporal
-    let ultimoEmailRegistrado = '';
-    let ultimoUserIdRegistrado = '';
-    
-    // ============================================
-    // PASO 1: REGISTRO DE USUARIO
-    // ============================================
-    formRegistro.addEventListener('submit', async (e) => {
-        e.preventDefault();
-        
-        const nombre = document.getElementById('regNombre').value.trim();
-        const email = document.getElementById('regEmail').value.trim();
-        const password = document.getElementById('regPassword').value;
-        const confirm = document.getElementById('regConfirm').value;
-        
-        // Validar campos
-        if (!nombre || !email || !password || !confirm) {
-            msgRegistro.innerHTML = '<div class="alert alert-error">⚠️ Completa todos los campos</div>';
-            return;
-        }
-        
-        // Validar contraseñas
-        if (password !== confirm) {
-            msgRegistro.innerHTML = '<div class="alert alert-error">⚠️ Las contraseñas no coinciden</div>';
-            return;
-        }
-        
-        if (password.length < 8) {
-            msgRegistro.innerHTML = '<div class="alert alert-error">⚠️ La contraseña debe tener al menos 8 caracteres</div>';
-            return;
-        }
-        
-        // Deshabilitar botón
-        const btn = formRegistro.querySelector('button');
-        const originalText = btn.textContent;
-        btn.textContent = '⏳ Registrando...';
-        btn.disabled = true;
-        
-        const result = await registrarUsuario(nombre, email, password);
-        
-        if (result.success) {
-            // Guardar datos para verificación
-            ultimoEmailRegistrado = email;
-            ultimoUserIdRegistrado = result.userId;
+    // Importamos la lógica desde auth.js (Ruta relativa desde /pages hacia /js)
+    import { registrarUsuario } from '../js/auth.js';
+
+    const form = document.getElementById('registroForm');
+    const msgArea = document.getElementById('regMessage');
+    const btn = document.getElementById('regBtn');
+
+    // Manejador del evento de envío
+    if (form) {
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
             
-            // Mostrar mensaje de éxito
-            msgRegistro.innerHTML = `<div class="alert alert-success">✅ ${result.message}</div>`;
-            
-            // Cambiar al paso de verificación
-            setTimeout(() => {
-                pasoRegistro.style.display = 'none';
-                pasoVerificacion.style.display = 'block';
-                emailEnviadoSpan.textContent = email;
+            // Estado de carga visual
+            btn.disabled = true;
+            btn.innerHTML = '<span class="animate-spin">🌀</span> Procesando...';
+            msgArea.style.display = 'none';
+
+            // Captura de datos
+            const nombre = document.getElementById('regNombre').value.trim();
+            const email = document.getElementById('regEmail').value.trim();
+            const pass = document.getElementById('regPass').value;
+
+            try {
+                // Llamada a la función de Supabase definida en auth.js
+                const result = await registrarUsuario(nombre, email, pass);
+
+                if (result.success) {
+                    // ÉXITO: Mostrar mensaje y limpiar
+                    msgArea.className = 'alert alert-success';
+                    msgArea.innerHTML = `<strong>¡Registro iniciado!</strong><br>${result.message}`;
+                    msgArea.style.display = 'block';
+                    form.reset();
+                    
+                    // Redirigir al login después de un breve delay
+                    setTimeout(() => {
+                        window.location.hash = 'login';
+                    }, 4000);
+
+                } else {
+                    // ERROR: Mostrar por qué falló
+                    throw new Error(result.message);
+                }
+            } catch (error) {
+                msgArea.className = 'alert alert-error';
+                msgArea.innerHTML = `<strong>Error:</strong> ${error.message}`;
+                msgArea.style.display = 'block';
                 
-                // Limpiar mensajes
-                msgRegistro.innerHTML = '';
-                msgVerificacion.innerHTML = '';
-            }, 2000);
-        } else {
-            msgRegistro.innerHTML = `<div class="alert alert-error">❌ ${result.message}</div>`;
-            btn.textContent = originalText;
-            btn.disabled = false;
-        }
-    });
-    
-    // ============================================
-    // PASO 2: VERIFICACIÓN POR CÓDIGO
-    // ============================================
-    formVerificacion.addEventListener('submit', async (e) => {
-        e.preventDefault();
-        
-        const codigo = codigoInput.value.trim();
-        
-        if (!codigo) {
-            msgVerificacion.innerHTML = '<div class="alert alert-error">⚠️ Ingresa el código de verificación</div>';
-            return;
-        }
-        
-        // Deshabilitar botón
-        const btn = formVerificacion.querySelector('button');
-        const originalText = btn.textContent;
-        btn.textContent = '⏳ Verificando...';
-        btn.disabled = true;
-        
-        const result = await verificarEmail(codigo, ultimoUserIdRegistrado);
-        
-        if (result.success) {
-            msgVerificacion.innerHTML = `<div class="alert alert-success">✅ ${result.message}</div>`;
-            
-            // Cambiar al paso de éxito después de 1.5 segundos
-            setTimeout(() => {
-                pasoVerificacion.style.display = 'none';
-                pasoExito.style.display = 'block';
-            }, 1500);
-        } else {
-            msgVerificacion.innerHTML = `<div class="alert alert-error">❌ ${result.message}</div>`;
-            btn.textContent = originalText;
-            btn.disabled = false;
-        }
-    });
-    
-    // ============================================
-    // REENVIAR CÓDIGO DE VERIFICACIÓN
-    // ============================================
-    const btnReenviar = document.getElementById('btnReenviar');
-    btnReenviar.addEventListener('click', async () => {
-        btnReenviar.disabled = true;
-        btnReenviar.textContent = '⏳ Enviando...';
-        
-        const result = await reenviarCodigoVerificacion();
-        
-        if (result.success) {
-            msgVerificacion.innerHTML = `<div class="alert alert-info">📧 ${result.message}</div>`;
-        } else {
-            msgVerificacion.innerHTML = `<div class="alert alert-error">❌ ${result.message}</div>`;
-        }
-        
-        setTimeout(() => {
-            btnReenviar.disabled = false;
-            btnReenviar.textContent = '🔄 Reenviar código';
-        }, 3000);
-    });
-    
-    // ============================================
-    // VOLVER AL REGISTRO
-    // ============================================
-    const btnVolverRegistro = document.getElementById('btnVolverRegistro');
-    btnVolverRegistro.addEventListener('click', () => {
-        pasoVerificacion.style.display = 'none';
-        pasoRegistro.style.display = 'block';
-        codigoInput.value = '';
-        msgVerificacion.innerHTML = '';
-        
-        // Limpiar formulario de registro
-        document.getElementById('formRegistro').reset();
-    });
-    
-    // ============================================
-    // IR AL LOGIN
-    // ============================================
-    const btnIrLogin = document.getElementById('btnIrLogin');
-    btnIrLogin.addEventListener('click', () => {
-        window.location.hash = 'login';
-        window.location.reload(); // Recargar para actualizar estado de sesión
-    });
-    
-    // ============================================
-    // REGISTRO CON GOOGLE
-    // ============================================
-    const googleRegistroBtn = document.getElementById('googleRegistroBtn');
-    if (googleRegistroBtn) {
-        googleRegistroBtn.addEventListener('click', () => {
-            iniciarSesionConGoogle();
+                // Restaurar botón para reintento
+                btn.disabled = false;
+                btn.textContent = 'Registrarse Ahora';
+            }
         });
     }
 </script>
