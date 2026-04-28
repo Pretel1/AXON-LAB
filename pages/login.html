@@ -1,127 +1,48 @@
-<div class="form-card">
-    <h2>🔑 Iniciar Sesión</h2>
-    <p>Accede a tu cuenta de AXON-LAB</p>
-    
-    <form id="formLogin">
-        <div class="form-group">
-            <label>Correo electrónico</label>
-            <input type="email" id="loginEmail" placeholder="ejemplo@correo.com" required>
+<div class="form-container animate-fade-in-up">
+    <div class="form-card">
+        <div style="text-align: center; margin-bottom: 2rem;">
+            <h2 class="text-gradient">Bienvenido de Nuevo</h2>
+            <p style="color: var(--text-secondary); font-size: var(--text-sm); margin-top: 0.5rem;">
+                Ingresa a tu terminal de AXON-LAB
+            </p>
         </div>
         
-        <div class="form-group">
-            <label>Contraseña</label>
-            <input type="password" id="loginPassword" placeholder="Ingresa tu contraseña" required>
-            <div>
-                <a href="#" id="btnOlvidePassword">¿Olvidaste tu contraseña?</a>
+        <form id="loginForm">
+            
+            <div class="form-group">
+                <label for="loginEmail" class="form-label required">Correo Electrónico</label>
+                <input type="email" id="loginEmail" class="form-input" placeholder="usuario@ejemplo.com" required>
             </div>
-        </div>
-        
-        <button type="submit" id="btnIngresar">🔐 Ingresar</button>
-        <div id="msgLogin"></div>
-    </form>
-    
-    <hr>
-    
-    <button id="googleLoginBtn">🌐 Iniciar sesión con Google</button>
-    
-    <p>¿No tienes cuenta? 
-        <a href="#" onclick="window.location.hash='registro'">Regístrate aquí</a>
-    </p>
-</div>
+            
+            <div class="form-group">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: var(--space-2);">
+                    <label for="loginPass" class="form-label required" style="margin-bottom: 0;">Contraseña</label>
+                    <a href="#recuperar" style="font-size: 0.75rem; color: var(--color-primary);">¿Olvidaste tu contraseña?</a>
+                </div>
+                <input type="password" id="loginPass" class="form-input" placeholder="••••••••" required>
+            </div>
 
-<!-- MODAL -->
-<div id="modalRecuperar" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.5); align-items:center; justify-content:center;">
-    <div style="background:white; padding:20px; border-radius:10px; width:300px;">
-        <h3>Recuperar contraseña</h3>
-        
-        <form id="formRecuperar">
-            <input type="email" id="recuperarEmail" placeholder="Correo" required>
-            <button type="submit">Enviar</button>
-            <div id="msgRecuperar"></div>
+            <button type="submit" id="loginBtn" class="btn btn-primary" style="width: 100%; margin-top: 1rem;">
+                Entrar al Sistema
+            </button>
+            
+            <div id="loginMessage" class="alert" style="display: none; margin-top: 1.5rem;"></div>
         </form>
+
+        <div class="divider">O</div>
         
-        <button id="btnCerrarModal">Cerrar</button>
+        <button type="button" class="btn-google">
+            <svg viewBox="0 0 24 24" width="20" height="20">
+                <path fill="currentColor" d="M21.35,11.1H12.18V13.83H18.69C18.36,17.64 15.19,19.27 12.19,19.27C9.03,19.27 6.59,17.38 6.59,13.21C6.59,9.03 9.07,7.15 12.19,7.15C14.1,7.15 15.7,7.85 16.89,8.9L18.89,6.9C17.21,5.34 14.88,4.42 12.19,4.42C7.16,4.42 3.86,7.9 3.86,13.21C3.86,18.52 7.16,22 12.19,22C17.21,22 21.35,18.52 21.35,13.21C21.35,12.45 21.27,11.75 21.35,11.1Z" />
+            </svg>
+            Continuar con Google
+        </button>
+
+        <p style="text-align: center; font-size: var(--text-sm); color: var(--text-muted); margin-top: 1.5rem;">
+            ¿No tienes una cuenta? 
+            <a href="#registro" style="color: var(--color-secondary); font-weight: var(--font-bold); text-decoration: none;">
+                Regístrate aquí
+            </a>
+        </p>
     </div>
 </div>
-
-<script type="module">
-import { iniciarSesion, iniciarSesionConGoogle, recuperarPassword, initAuth } from '../js/auth.js';
-
-// ================= LOGIN =================
-const form = document.getElementById('formLogin');
-const msg = document.getElementById('msgLogin');
-
-form.addEventListener('submit', async e=>{
-    e.preventDefault();
-
-    const email = document.getElementById('loginEmail').value.trim();
-    const pass = document.getElementById('loginPassword').value;
-
-    if (!email || !pass) {
-        msg.innerHTML = '❌ Completa los campos';
-        return;
-    }
-
-    const btn = document.getElementById('btnIngresar');
-    btn.disabled = true;
-    btn.textContent = 'Ingresando...';
-
-    const res = await iniciarSesion(email, pass);
-
-    if (res.success) {
-        await initAuth(); // 🔥 importante
-
-        msg.innerHTML = '✅ Bienvenido';
-        setTimeout(()=>location.hash='inicio',1200);
-
-    } else {
-        msg.innerHTML = '❌ ' + res.message;
-        btn.disabled = false;
-        btn.textContent = '🔐 Ingresar';
-    }
-});
-
-// ================= GOOGLE =================
-document.getElementById('googleLoginBtn')
-.addEventListener('click', async ()=>{
-    await iniciarSesionConGoogle();
-});
-
-// ================= MODAL =================
-const modal = document.getElementById('modalRecuperar');
-
-document.getElementById('btnOlvidePassword')
-.addEventListener('click', e=>{
-    e.preventDefault();
-    modal.style.display='flex';
-});
-
-document.getElementById('btnCerrarModal')
-.addEventListener('click', ()=>{
-    modal.style.display='none';
-});
-
-// ================= RECUPERAR =================
-const formRec = document.getElementById('formRecuperar');
-const msgRec = document.getElementById('msgRecuperar');
-
-formRec.addEventListener('submit', async e=>{
-    e.preventDefault();
-
-    const email = document.getElementById('recuperarEmail').value.trim();
-
-    if (!email) {
-        msgRec.innerHTML='❌ Ingresa correo';
-        return;
-    }
-
-    const res = await recuperarPassword(email);
-
-    if (res.success) {
-        msgRec.innerHTML='✅ Enviado';
-        setTimeout(()=>modal.style.display='none',2000);
-    } else {
-        msgRec.innerHTML='❌ '+res.message;
-    }
-});
-</script>
