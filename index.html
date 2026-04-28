@@ -82,15 +82,10 @@
     </div>
 
     <!-- ============================================ -->
-    <!-- SCRIPTS - ORDEN CORRECTO (MODULE)            -->
-    <!-- 1. Configuración de Appwrite                -->
-    <!-- 2. Autenticación (depende de config)        -->
-    <!-- 3. Lógica de laboratorios                   -->
-    <!-- 4. Router (depende de auth)                 -->
-    <!-- 5. App (inicialización principal)           -->
+    <!-- SCRIPTS - ORDEN CORRECTO PARA SUPABASE       -->
     <!-- ============================================ -->
     
-    <script type="module" src="js/appwrite-config.js"></script>
+    <script type="module" src="js/supabase-config.js"></script>
     <script type="module" src="js/auth.js"></script>
     <script type="module" src="js/labs.js"></script>
     <script type="module" src="js/router.js"></script>
@@ -98,10 +93,8 @@
     
     <!-- ============================================ -->
     <!-- SCRIPT DE INICIALIZACIÓN ADICIONAL           -->
-    <!-- Para funciones que necesitan DOM listo       -->
     <!-- ============================================ -->
     <script type="module">
-        // Este script asegura que el cierre de sesión funcione
         import { cerrarSesion, actualizarUIGlobal, obtenerUsuarioActual } from './js/auth.js';
         
         // Configurar el botón de cierre de sesión
@@ -110,14 +103,8 @@
             logoutLink.addEventListener('click', async (e) => {
                 e.preventDefault();
                 await cerrarSesion();
-                // Actualizar UI después de cerrar sesión
                 actualizarUIGlobal();
-                // Redirigir a inicio
-                if (typeof window.cambiarPagina === 'function') {
-                    window.cambiarPagina('inicio');
-                } else {
-                    window.location.hash = 'inicio';
-                }
+                window.location.hash = 'inicio';
             });
         }
         
@@ -138,24 +125,19 @@
             });
         }
         
-        // Escuchar cambios de autenticación para actualizar el menú
-        document.addEventListener('authChanged', (event) => {
+        // Escuchar cambios de autenticación
+        document.addEventListener('authChanged', () => {
             console.log('🔄 Evento authChanged recibido');
             actualizarUIGlobal();
             
-            // Actualizar userName en el header
             const user = obtenerUsuarioActual();
             const userNameSpan = document.getElementById('userName');
             if (userNameSpan) {
-                let nombre = user?.nombre || 'Invitado';
-                if (user && !user.emailVerificado) {
-                    nombre += ' (⚠️ verificar email)';
-                }
-                userNameSpan.textContent = nombre;
+                userNameSpan.textContent = user?.nombre || 'Invitado';
             }
         });
         
-        // Ocultar loader cuando la página esté lista
+        // Ocultar loader
         window.addEventListener('load', () => {
             const loader = document.getElementById('loader');
             if (loader) {
